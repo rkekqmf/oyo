@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { getEngravingEffects } from '../utils/engraving'
 
 const TABS = [
   { id: 'equipment', label: '장비' },
@@ -24,7 +25,7 @@ function EquipmentTab({ equipment }) {
 }
 
 function EngravingsTab({ engravings }) {
-  const effects = engravings?.Effects || []
+  const effects = getEngravingEffects(engravings)
   if (!effects.length) {
     return <p className="detail-empty">각인 정보가 없습니다.</p>
   }
@@ -34,7 +35,7 @@ function EngravingsTab({ engravings }) {
       {effects.map((effect, idx) => (
         <li key={`${effect.Name}-${idx}`} className="detail-list-item">
           <strong>{effect.Name || '-'}</strong>
-          <span>{effect.Description || '-'}</span>
+          <span>{effect.Description || effect.Grade || '-'}</span>
         </li>
       ))}
     </ul>

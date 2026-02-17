@@ -1,5 +1,8 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import './App.css'
+import { AuctionMarketPanel } from './components/AuctionMarketPanel'
+import { BossReadinessPanel } from './components/BossReadinessPanel'
+import { CharacterComparePanel } from './components/CharacterComparePanel'
 import { CharacterDetailModal } from './components/CharacterDetailModal'
 import { FavoriteCharacters } from './components/FavoriteCharacters'
 import { CharacterResult } from './components/CharacterResult'
@@ -52,6 +55,18 @@ function App() {
     setDetailLoading(false)
   }
 
+  const availableCharacters = useMemo(() => {
+    const fromSearch = Array.isArray(result) ? result : []
+    const map = new Map()
+
+    ;[...favorites, ...fromSearch].forEach((character) => {
+      if (!character?.CharacterName || !character?.ServerName) return
+      map.set(`${character.CharacterName}:${character.ServerName}`, character)
+    })
+
+    return Array.from(map.values())
+  }, [favorites, result])
+
   return (
     <main className="app-shell">
       <header className="app-header">
@@ -72,6 +87,9 @@ function App() {
         }}
         onClear={clearRecentSearches}
       />
+      <AuctionMarketPanel />
+      <BossReadinessPanel characters={availableCharacters} />
+      <CharacterComparePanel characters={availableCharacters} />
       <FavoriteCharacters
         favorites={favorites}
         onSelectCharacter={handleSelectCharacter}

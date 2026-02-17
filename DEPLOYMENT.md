@@ -18,11 +18,28 @@ wrangler login
 
 ```bash
 npm install
+wrangler d1 create oyo-db
+wrangler d1 migrations apply oyo-db --local
+wrangler d1 migrations apply oyo-db --remote
 wrangler secret put LOSTARK_API_TOKEN
 npm run deploy
 ```
 
 배포가 끝나면 Worker URL을 확인합니다. 예: `https://backend.<account>.workers.dev`
+
+추가 환경 변수(선택):
+
+- `AUCTION_WATCH_ITEMS=50010|정제된 파괴강석,50010|파괴강석,50010|태양의 가호`
+  - cron 수집 대상 목록(쉼표 구분)
+  - 권장 형식: `카테고리코드|아이템명`
+  - 설정 위치:
+    - 로컬: `backend/.dev.vars`
+    - 배포: Cloudflare Dashboard > Workers > backend > Settings > Variables
+
+주의:
+
+- `wrangler d1 create` 실행 후 출력되는 `database_id` 값을
+  `backend/wrangler.jsonc`의 `d1_databases[0].database_id`에 반영해야 합니다.
 
 ## 3) Frontend 배포 (Cloudflare Pages)
 

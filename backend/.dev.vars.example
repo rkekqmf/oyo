@@ -1,1 +1,3 @@
 LOSTARK_API_TOKEN=your_lostark_api_token_here
+# 권장 형식: 카테고리코드|아이템명,카테고리코드|아이템명
+AUCTION_WATCH_ITEMS=50010|태양의 가호,50010|파괴강석,50010|정제된 파괴강석

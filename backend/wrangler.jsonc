@@ -17,6 +17,19 @@
 	},
 	"observability": {
 		"enabled": true
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "oyo-db",
+			"database_id": "e5d8d924-0383-4373-876d-e86a8e852bc1"
+		}
+	],
+	"vars": {
+		"AUCTION_WATCH_ITEMS": "50010|정제된 파괴강석,50010|파괴강석,50010|태양의 가호"
+	},
+	"triggers": {
+		"crons": ["0 */6 * * *"]
 	}
 	/**
 	 * Smart Placement
