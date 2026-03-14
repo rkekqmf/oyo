@@ -9,14 +9,36 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+html {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted, #64748b) 60%, transparent)
+    color-mix(in srgb, var(--bg, #f8fafc) 85%, transparent);
+}
+
 body {
   margin: 0;
-  background: #f8fafc;
-  color: #0f172a;
+  background: var(--bg, #f8fafc);
+  color: var(--text, #0f172a);
   min-width: 320px;
   min-height: 100vh;
 }
 
 #root {
   min-height: 100vh;
+}
+
+html::-webkit-scrollbar {
+  width: 11px;
+}
+
+html::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--bg, #f8fafc) 88%, transparent);
+}
+
+html::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted, #64748b) 58%, transparent);
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--bg, #f8fafc) 88%, transparent);
 }

@@ -4,6 +4,14 @@ import {
   buildCharacterCompareRow,
   getMaxMetrics,
 } from '../utils/characterCompare'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from './ui/card'
+import { Button } from './ui/button'
 
 const MAX_COMPARE_COUNT = 3
 
@@ -73,11 +81,12 @@ export function CharacterComparePanel({ characters }) {
   }
 
   return (
-    <section className="compare-section">
-      <header className="compare-header">
-        <h2>캐릭터 비교</h2>
-        <p>최대 3명을 선택해 스펙을 한눈에 비교합니다.</p>
-      </header>
+    <Card className="compare-section">
+      <CardHeader className="compare-header">
+        <CardTitle>캐릭터 비교</CardTitle>
+        <CardDescription>최대 3명을 선택해 스펙을 한눈에 비교합니다.</CardDescription>
+      </CardHeader>
+      <CardContent>
 
       {!characterOptions.length && (
         <p className="result-empty">
@@ -102,14 +111,14 @@ export function CharacterComparePanel({ characters }) {
             ))}
           </div>
 
-          <button
+          <Button
             type="button"
             className="compare-button"
             onClick={runCompare}
             disabled={loading}
           >
             {loading ? '비교 중...' : '비교 실행'}
-          </button>
+          </Button>
         </>
       )}
 
@@ -161,6 +170,7 @@ export function CharacterComparePanel({ characters }) {
           </table>
         </div>
       )}
-    </section>
+      </CardContent>
+    </Card>
   )
 }

@@ -33,6 +33,16 @@ export async function fetchCharacterArmory(name) {
   return payload.data
 }
 
+export async function fetchSasagePosts(name) {
+  const payload = await request(
+    `/api/community/sasage/${encodeURIComponent(name)}`
+  )
+  return {
+    posts: Array.isArray(payload.data) ? payload.data : [],
+    warning: payload.warning || '',
+  }
+}
+
 export async function createMarketSnapshot(itemName) {
   const res = await fetch(`${API_BASE_URL}/api/market/snapshot`, {
     method: 'POST',
@@ -45,6 +55,65 @@ export async function createMarketSnapshot(itemName) {
     throw new Error(payload?.message || `요청 실패 (status: ${res.status})`)
   }
   return payload.data
+}
+
+/** 게임 API 원본 응답 그대로 (백엔드 가공 없음) - 1건 */
+export async function fetchMarketRaw(itemName) {
+  const res = await fetch(`${API_BASE_URL}/api/market/raw`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ itemName }),
+  })
+  const payload = await res.json().catch(() => null)
+  if (!res.ok || !payload?.ok) {
+    throw new Error(payload?.message || `요청 실패 (status: ${res.status})`)
+  }
+  return { data: payload.data, source: payload.source ?? '' }
+}
+
+/** 게임 API 원본 여러 아이템 한 번에 (가공 없이 그대로) */
+export async function fetchMarketRawMulti(itemNames) {
+  if (!itemNames?.length) return []
+  const res = await fetch(`${API_BASE_URL}/api/market/raw/multi`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ itemNames }),
+  })
+  const payload = await res.json().catch(() => null)
+  if (!res.ok || !payload?.ok) {
+    throw new Error(payload?.message || `요청 실패 (status: ${res.status})`)
+  }
+  return payload.data ?? []
+}
+
+/** 계산용: RecentPrice 기반 단가(묶음 환산 포함) 여러 아이템 */
+export async function fetchMarketRecentMulti(itemNames) {
+  if (!itemNames?.length) return []
+  const res = await fetch(`${API_BASE_URL}/api/market/recent/multi`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ itemNames }),
+  })
+  const payload = await res.json().catch(() => null)
+  if (!res.ok || !payload?.ok) {
+    throw new Error(payload?.message || `요청 실패 (status: ${res.status})`)
+  }
+  return payload.data ?? []
+}
+
+/** 여러 아이템 시세를 한 번에 조회 (단일 요청) */
+export async function createMarketSnapshotsBatch(itemNames) {
+  if (!itemNames?.length) return []
+  const res = await fetch(`${API_BASE_URL}/api/market/snapshot/multi`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ itemNames }),
+  })
+  const payload = await res.json().catch(() => null)
+  if (!res.ok || !payload?.ok) {
+    throw new Error(payload?.message || `요청 실패 (status: ${res.status})`)
+  }
+  return payload.data ?? []
 }
 
 export async function fetchMarketHistory(itemName, days = 30) {

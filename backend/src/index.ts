@@ -33,16 +33,29 @@ function getLostArkHeaders(token: string) {
 }
 
 async function fetchLostArkJson(token: string, path: string) {
-  const res = await fetch(`${LOSTARK_API_BASE_URL}${path}`, {
-    headers: getLostArkHeaders(token),
-  })
+  const maxRetries = 2
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    const res = await fetch(`${LOSTARK_API_BASE_URL}${path}`, {
+      headers: getLostArkHeaders(token),
+    })
 
-  if (!res.ok) {
+    if (res.ok) {
+      return res.json()
+    }
+
+    if (res.status === 429 && attempt < maxRetries) {
+      const retryAfter = Number.parseInt(res.headers.get('Retry-After') || '', 10)
+      const waitMs = Number.isFinite(retryAfter)
+        ? retryAfter * 1000
+        : (attempt + 1) * 800
+      await new Promise((resolve) => setTimeout(resolve, waitMs))
+      continue
+    }
+
     const text = await res.text()
-    throw new Error(`status:${res.status} ${text}`)
+    throw new Error(`status:${res.status} ${text || 'null'}`)
   }
-
-  return res.json()
+  throw new Error('status:429 null')
 }
 
 async function fetchLostArkPostJson(
@@ -141,6 +154,86 @@ function extractMarketPrices(payload: any): number[] {
   }
 
   return candidates.filter((price) => Number.isFinite(price) && price > 0)
+}
+
+function getShardPackSize(name: string): number {
+  if (!name) return 1
+  if (name.includes('소')) return 1000
+  if (name.includes('중')) return 2000
+  if (name.includes('대')) return 3000
+  return 1
+}
+
+async function collectMarketRecent(token: string, itemName: string) {
+  let lastErr: unknown = null
+  for (const code of MARKET_CATEGORY_FALLBACK_CODES) {
+    try {
+      const payload = await fetchLostArkPostJson(token, '/markets/items', {
+        CategoryCode: code,
+        ItemName: itemName,
+        Sort: 'GRADE',
+        SortCondition: 'ASC',
+        PageNo: 0,
+      })
+
+      const items: any[] = Array.isArray(payload?.Items) ? payload.Items : []
+      let picked: any = null
+      let bestUnitRecentPrice = Number.POSITIVE_INFINITY
+
+      for (const marketItem of items) {
+        const recentPrice = toNumber(marketItem?.RecentPrice)
+        if (recentPrice <= 0) continue
+        const rawName = String(
+          marketItem?.Name ??
+          marketItem?.ItemName ??
+          marketItem?.AuctionInfo?.Name ??
+          ''
+        )
+
+        // 기본: BundleCount 기준 환산, 파편은 소/중/대 실제 개수로 환산.
+        const bundleCount = Math.max(1, toNumber(marketItem?.BundleCount))
+        const unitsPerPack = itemName.includes('파편')
+          ? getShardPackSize(rawName) || bundleCount
+          : bundleCount
+        const unitRecentPrice = recentPrice / Math.max(1, unitsPerPack)
+
+        if (unitRecentPrice < bestUnitRecentPrice) {
+          bestUnitRecentPrice = unitRecentPrice
+          picked = {
+            recentPrice,
+            bundleCount,
+            unitsPerPack,
+            currentMinPrice: toNumber(marketItem?.CurrentMinPrice),
+            yDayAvgPrice: toNumber(marketItem?.YDayAvgPrice),
+            icon: marketItem?.Icon || marketItem?.IconUrl || null,
+          }
+        }
+      }
+
+      if (picked) {
+        return {
+          itemName,
+          recentPrice: picked.recentPrice,
+          bundleCount: picked.bundleCount,
+          unitsPerPack: picked.unitsPerPack,
+          unitRecentPrice: bestUnitRecentPrice,
+          currentMinPrice: picked.currentMinPrice,
+          yDayAvgPrice: picked.yDayAvgPrice,
+          icon: picked.icon,
+          capturedAt: new Date().toISOString(),
+          source: `markets/items?CategoryCode=${code}`,
+        }
+      }
+    } catch (e) {
+      lastErr = e
+    }
+  }
+
+  throw new Error(
+    `${itemName}: markets empty. tried=${MARKET_CATEGORY_FALLBACK_CODES.join(
+      ','
+    )} err=${String(lastErr)}`
+  )
 }
 
 function extractTradeVolume(payload: any, fallbackCount: number): number {
@@ -298,6 +391,61 @@ function parseWatchItems(env: Bindings): WatchItem[] {
     .filter((item) => item.itemName)
 }
 
+function decodeHtmlEntities(input: string): string {
+  return input
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+}
+
+function stripTags(input: string): string {
+  return input.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+async function fetchInvenSasagePosts(query: string) {
+  const encoded = encodeURIComponent(query)
+  const searchUrl = `https://www.inven.co.kr/search/lostark/article?query=${encoded}`
+  const res = await fetch(searchUrl, {
+    headers: {
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      Accept: 'text/html,application/xhtml+xml',
+    },
+  })
+
+  const html = await res.text()
+  if (!res.ok) {
+    throw new Error(`inven-status:${res.status}`)
+  }
+
+  const regex =
+    /<a[^>]*href="(https?:\/\/www\.inven\.co\.kr\/board\/lostark\/5355\/\d+|\/board\/lostark\/5355\/\d+)"[^>]*>([\s\S]*?)<\/a>/gi
+
+  const seen = new Set<string>()
+  const posts: Array<{ title: string; url: string }> = []
+  let match: RegExpExecArray | null = regex.exec(html)
+  while (match) {
+    const rawUrl = match[1]
+    const rawTitle = match[2]
+    const url = rawUrl.startsWith('http')
+      ? rawUrl
+      : `https://www.inven.co.kr${rawUrl}`
+    const title = stripTags(decodeHtmlEntities(rawTitle))
+
+    if (title && !seen.has(url)) {
+      seen.add(url)
+      posts.push({ title, url })
+    }
+    if (posts.length >= 12) break
+    match = regex.exec(html)
+  }
+
+  return posts
+}
+
 async function runScheduledSnapshotCollection(env: Bindings) {
   if (!env.DB) return
   const items = parseWatchItems(env)
@@ -361,45 +509,278 @@ app.get('/api/lostark/armories/:name', async (c) => {
   }
 
   const encodedName = encodeURIComponent(name)
-  const endpoints = {
+  const requiredEndpoints = {
     profile: `/armories/characters/${encodedName}/profiles`,
     equipment: `/armories/characters/${encodedName}/equipment`,
     engravings: `/armories/characters/${encodedName}/engravings`,
     gems: `/armories/characters/${encodedName}/gems`,
   }
+  const optionalEndpoints = {
+    arkPassive: `/armories/characters/${encodedName}/arkpassive`,
+    arkGrid: `/armories/characters/${encodedName}/arkgrid`,
+  }
 
-  const settled = await Promise.allSettled([
-    fetchLostArkJson(token, endpoints.profile),
-    fetchLostArkJson(token, endpoints.equipment),
-    fetchLostArkJson(token, endpoints.engravings),
-    fetchLostArkJson(token, endpoints.gems),
+  const requiredSettled = await Promise.allSettled([
+    fetchLostArkJson(token, requiredEndpoints.profile),
+    fetchLostArkJson(token, requiredEndpoints.equipment),
+    fetchLostArkJson(token, requiredEndpoints.engravings),
+    fetchLostArkJson(token, requiredEndpoints.gems),
+  ])
+  const optionalSettled = await Promise.allSettled([
+    fetchLostArkJson(token, optionalEndpoints.arkPassive),
+    fetchLostArkJson(token, optionalEndpoints.arkGrid),
   ])
 
-  const [profileRes, equipmentRes, engravingsRes, gemsRes] = settled
+  const [
+    profileRes,
+    equipmentRes,
+    engravingsRes,
+    gemsRes,
+  ] = requiredSettled
+  const [arkPassiveRes, arkGridRes] = optionalSettled
 
   const data = {
     profile: profileRes.status === 'fulfilled' ? profileRes.value : null,
     equipment: equipmentRes.status === 'fulfilled' ? equipmentRes.value : [],
     engravings: engravingsRes.status === 'fulfilled' ? engravingsRes.value : null,
     gems: gemsRes.status === 'fulfilled' ? gemsRes.value : null,
+    arkPassive: arkPassiveRes.status === 'fulfilled' ? arkPassiveRes.value : null,
+    arkGrid: arkGridRes.status === 'fulfilled' ? arkGridRes.value : null,
   }
 
-  const errors = settled
-    .map((result, index) => ({ result, key: Object.keys(endpoints)[index] }))
+  const requiredErrors = requiredSettled
+    .map((result, index) => ({ result, key: Object.keys(requiredEndpoints)[index] }))
     .filter(({ result }) => result.status === 'rejected')
     .map(({ key, result }) => ({
       key,
       message: result.status === 'rejected' ? result.reason?.message : 'unknown',
     }))
 
-  if (errors.length === settled.length) {
+  const optionalErrors = optionalSettled
+    .map((result, index) => ({ result, key: Object.keys(optionalEndpoints)[index] }))
+    .filter(({ result }) => result.status === 'rejected')
+    .map(({ key, result }) => ({
+      key,
+      message: result.status === 'rejected' ? result.reason?.message : 'unknown',
+    }))
+
+  const errors = [...requiredErrors, ...optionalErrors]
+
+  if (requiredErrors.length === requiredSettled.length) {
+    const isRateLimited = requiredErrors.every((error) =>
+      String(error.message).includes('status:429')
+    )
+    if (isRateLimited) {
+      return c.json(
+        {
+          ok: false,
+          message: '요청이 많습니다. 잠시 후 다시 시도해주세요. (status:429)',
+          errors,
+        },
+        429
+      )
+    }
+
+    const firstMessage = requiredErrors[0]?.message || 'unknown'
     return c.json(
-      { ok: false, message: '상세 정보를 불러오지 못했습니다.', errors },
+      {
+        ok: false,
+        message: `상세 정보를 불러오지 못했습니다. (${firstMessage})`,
+        errors,
+      },
       502
     )
   }
 
   return c.json({ ok: true, data, partialErrors: errors })
+})
+
+app.get('/api/community/sasage/:name', async (c) => {
+  const name = c.req.param('name').trim()
+  if (!name) {
+    return c.json({ ok: false, message: 'name is required' }, 400)
+  }
+
+  try {
+    const posts = await fetchInvenSasagePosts(name)
+    return c.json({
+      ok: true,
+      data: posts,
+      meta: { query: name, source: 'inven-5355' },
+    })
+  } catch (e) {
+    return c.json({
+      ok: true,
+      data: [],
+      warning: e instanceof Error ? e.message : 'sasage-fetch-failed',
+    })
+  }
+})
+
+/** 게임 API 원본 응답 그대로 반환 (백엔드에서 min/avg 등 가공 안 함) */
+app.post('/api/market/raw', async (c) => {
+  try {
+    const token = c.env.LOSTARK_API_TOKEN
+    if (!token) {
+      return c.json({ ok: false, message: 'LOSTARK_API_TOKEN is missing' }, 500)
+    }
+    const body = await c.req.json<{ itemName?: string }>()
+    const itemName = (body.itemName || '').trim()
+    if (!itemName) {
+      return c.json({ ok: false, message: 'itemName is required' }, 400)
+    }
+
+    let source: string
+    let raw: unknown
+
+    try {
+      raw = await fetchLostArkPostJson(token, '/auctions/items', {
+        ItemName: itemName,
+        PageNo: 1,
+      })
+      source = 'auctions/items'
+    } catch {
+      const codes = [50010, 50020, 50030, 50040, 50050, 51000]
+      let lastErr: Error | null = null
+      raw = null
+      source = ''
+      for (const code of codes) {
+        try {
+          raw = await fetchLostArkPostJson(token, '/markets/items', {
+            CategoryCode: code,
+            ItemName: itemName,
+            Sort: 'GRADE',
+            SortCondition: 'ASC',
+            PageNo: 0,
+          })
+          source = `markets/items?CategoryCode=${code}`
+          break
+        } catch (e) {
+          lastErr = e instanceof Error ? e : new Error(String(e))
+        }
+      }
+      if (raw === null) {
+        throw lastErr ?? new Error('markets failed')
+      }
+    }
+
+    return c.json({ ok: true, data: raw, source })
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'market raw failed'
+    console.error('[market/raw]', message, e)
+    return c.json({ ok: false, message }, 500)
+  }
+})
+
+/** 게임 API 원본 여러 아이템 한 번에 (각각 가공 없이 그대로 반환) */
+app.post('/api/market/raw/multi', async (c) => {
+  try {
+    const token = c.env.LOSTARK_API_TOKEN
+    if (!token) {
+      return c.json({ ok: false, message: 'LOSTARK_API_TOKEN is missing' }, 500)
+    }
+    const body = await c.req.json<{ itemNames?: string[] }>()
+    const raw = body.itemNames
+    const itemNames = Array.isArray(raw)
+      ? [...new Set((raw as string[]).map((s) => String(s).trim()).filter(Boolean))]
+      : []
+    if (itemNames.length === 0) {
+      return c.json({ ok: true, data: [] })
+    }
+
+    const results = await Promise.allSettled(
+      itemNames.map(async (itemName) => {
+        let source: string
+        let data: unknown
+        try {
+          data = await fetchLostArkPostJson(token, '/auctions/items', {
+            ItemName: itemName,
+            PageNo: 1,
+          })
+          source = 'auctions/items'
+          return { itemName, data, source }
+        } catch {
+          const codes = [50010, 50020, 50030, 50040, 50050, 51000]
+          for (const code of codes) {
+            try {
+              data = await fetchLostArkPostJson(token, '/markets/items', {
+                CategoryCode: code,
+                ItemName: itemName,
+                Sort: 'GRADE',
+                SortCondition: 'ASC',
+                PageNo: 0,
+              })
+              source = `markets/items?CategoryCode=${code}`
+              return { itemName, data, source }
+            } catch {
+              /* try next code */
+            }
+          }
+          throw new Error(`${itemName}: no data`)
+        }
+      })
+    )
+
+    const data = results.map((r, i) => {
+      if (r.status === 'fulfilled') return r.value
+      return {
+        itemName: itemNames[i],
+        data: null,
+        source: '',
+        error: r.reason?.message ?? String(r.reason),
+      }
+    })
+    return c.json({ ok: true, data })
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'market raw multi failed'
+    console.error('[market/raw/multi]', message, e)
+    return c.json({ ok: false, message }, 500)
+  }
+})
+
+/** 계산용: RecentPrice 기반(묶음단위 환산 포함) 여러 아이템 단가 */
+app.post('/api/market/recent/multi', async (c) => {
+  try {
+    const token = c.env.LOSTARK_API_TOKEN
+    if (!token) {
+      return c.json({ ok: false, message: 'LOSTARK_API_TOKEN is missing' }, 500)
+    }
+    const body = await c.req.json<{ itemNames?: string[] }>()
+    const raw = body.itemNames
+    const itemNames = Array.isArray(raw)
+      ? [...new Set((raw as string[]).map((s) => String(s).trim()).filter(Boolean))]
+      : []
+    if (itemNames.length === 0) {
+      return c.json({ ok: true, data: [] })
+    }
+
+    const results = await Promise.allSettled(
+      itemNames.map((itemName) => collectMarketRecent(token, itemName))
+    )
+
+    const data = results.map((r, i) => {
+      if (r.status === 'fulfilled') return r.value
+      return {
+        itemName: itemNames[i],
+        recentPrice: 0,
+        bundleCount: 1,
+        unitsPerPack: 1,
+        unitRecentPrice: 0,
+        currentMinPrice: 0,
+        yDayAvgPrice: 0,
+        icon: null,
+        capturedAt: new Date().toISOString(),
+        source: '',
+        error: r.reason?.message ?? String(r.reason),
+      }
+    })
+
+    return c.json({ ok: true, data })
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'market recent multi failed'
+    console.error('[market/recent/multi]', message, e)
+    return c.json({ ok: false, message }, 500)
+  }
 })
 
 app.post('/api/market/snapshot', async (c) => {
@@ -413,13 +794,40 @@ app.post('/api/market/snapshot', async (c) => {
     const snapshot = await collectAndStoreMarketSnapshot(c.env, itemName)
     return c.json({ ok: true, data: snapshot })
   } catch (e) {
+    const message = e instanceof Error ? e.message : 'snapshot failed'
+    console.error('[market/snapshot]', message, e)
     return c.json(
       {
         ok: false,
-        message: e instanceof Error ? e.message : 'snapshot failed',
+        message,
       },
       500
     )
+  }
+})
+
+app.post('/api/market/snapshot/multi', async (c) => {
+  try {
+    const body = await c.req.json<{ itemNames?: string[] }>()
+    const raw = body.itemNames
+    const itemNames = Array.isArray(raw)
+      ? [...new Set((raw as string[]).map((s) => String(s).trim()).filter(Boolean))]
+      : []
+    if (itemNames.length === 0) {
+      return c.json({ ok: true, data: [] })
+    }
+
+    const results = await Promise.allSettled(
+      itemNames.map((itemName) => collectAndStoreMarketSnapshot(c.env, itemName))
+    )
+    const data = results
+      .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof collectAndStoreMarketSnapshot>>> => r.status === 'fulfilled')
+      .map((r) => r.value)
+    return c.json({ ok: true, data })
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'snapshot multi failed'
+    console.error('[market/snapshot/multi]', message, e)
+    return c.json({ ok: false, message }, 500)
   }
 })
 

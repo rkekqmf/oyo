@@ -1,4 +1,12 @@
-export function CharacterCard({ character, onClick, favorite, onToggleFavorite }) {
+import { Button } from './ui/button'
+
+export function CharacterCard({
+  character,
+  insight,
+  onClick,
+  favorite,
+  onToggleFavorite,
+}) {
   return (
     <article
       className={onClick ? 'character-card is-clickable' : 'character-card'}
@@ -17,8 +25,10 @@ export function CharacterCard({ character, onClick, favorite, onToggleFavorite }
         <div className="character-card-title-row">
           <h3>{character.CharacterName || '이름 없음'}</h3>
           {onToggleFavorite ? (
-            <button
+            <Button
               type="button"
+              size="sm"
+              variant="secondary"
               className={favorite ? 'favorite-button is-active' : 'favorite-button'}
               onClick={(e) => {
                 e.stopPropagation()
@@ -27,7 +37,7 @@ export function CharacterCard({ character, onClick, favorite, onToggleFavorite }
               aria-label={favorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
             >
               {favorite ? '★' : '☆'}
-            </button>
+            </Button>
           ) : null}
         </div>
         <span>{character.CharacterClassName || '-'}</span>
@@ -47,6 +57,25 @@ export function CharacterCard({ character, onClick, favorite, onToggleFavorite }
           <dd>{character.ItemMaxLevel || '-'}</dd>
         </div>
       </dl>
+      <section className="combat-insight">
+        <p className="combat-insight-title">점수</p>
+        {insight ? (
+          <>
+            <p className="combat-insight-score">
+              {insight.score.toLocaleString()} <span>{insight.grade}등급</span>
+            </p>
+            <p className="combat-insight-sub">실투력 추정 · API 기반 환산</p>
+            <p className="combat-insight-line">
+              아크 패시브: {insight.arkPassive.summary}
+            </p>
+            <p className="combat-insight-line">
+              아크 그리드: {insight.arkGrid.summary} ({insight.arkGrid.tier})
+            </p>
+          </>
+        ) : (
+          <p className="combat-insight-loading">검색한 캐릭터만 점수 표시</p>
+        )}
+      </section>
     </article>
   )
 }

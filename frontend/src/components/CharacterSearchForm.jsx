@@ -1,3 +1,6 @@
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+
 export function CharacterSearchForm({ name, onNameChange, onSearch, loading }) {
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -6,15 +9,15 @@ export function CharacterSearchForm({ name, onNameChange, onSearch, loading }) {
 
   return (
     <form onSubmit={handleSubmit} className="search-form">
-      <input
+      <Input
         value={name}
         onChange={(e) => onNameChange(e.target.value)}
         placeholder="캐릭터명 입력"
         className="search-input"
       />
-      <button type="submit" disabled={loading} className="search-button">
+      <Button type="submit" disabled={loading} className="search-button">
         {loading ? '조회중...' : '조회'}
-      </button>
+      </Button>
     </form>
   )
 }

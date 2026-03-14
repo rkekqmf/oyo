@@ -2,6 +2,16 @@ import { useMemo, useState } from 'react'
 import { BOSS_CHECKLIST } from '../data/bossChecklist'
 import { fetchCharacterArmory } from '../services/lostarkApi'
 import { evaluateBossReadiness } from '../utils/bossReadiness'
+import { Badge } from './ui/badge'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from './ui/card'
+import { Button } from './ui/button'
+import { Select } from './ui/select'
 
 function toCharacterKey(character) {
   return `${character.CharacterName}:${character.ServerName}`
@@ -54,27 +64,30 @@ export function BossReadinessPanel({ characters }) {
   }
 
   return (
-    <section className="boss-check-section">
-      <header className="boss-check-header">
-        <h2>보스 준비도 체크</h2>
-        <p>선택한 보스 기준으로 캐릭터 스펙을 자동 점검합니다.</p>
-      </header>
+    <Card className="boss-check-section">
+      <CardHeader className="boss-check-header">
+        <CardTitle>보스 준비도 체크</CardTitle>
+        <CardDescription>
+          선택한 보스 기준으로 캐릭터 스펙을 자동 점검합니다.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
 
       <div className="boss-check-controls">
         <label className="boss-check-field">
           <span>보스</span>
-          <select value={bossId} onChange={(e) => setBossId(e.target.value)}>
+          <Select value={bossId} onChange={(e) => setBossId(e.target.value)}>
             {BOSS_CHECKLIST.map((boss) => (
               <option key={boss.id} value={boss.id}>
                 {boss.name} {boss.difficulty}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
 
         <label className="boss-check-field">
           <span>캐릭터</span>
-          <select
+          <Select
             value={characterKey}
             onChange={(e) => setCharacterKey(e.target.value)}
           >
@@ -84,17 +97,17 @@ export function BossReadinessPanel({ characters }) {
                 {option.character.CharacterName} ({option.character.ServerName})
               </option>
             ))}
-          </select>
+          </Select>
         </label>
 
-        <button
+        <Button
           type="button"
           className="boss-check-button"
           onClick={runCheck}
           disabled={loading || !characterOptions.length}
         >
           {loading ? '점검 중...' : '준비도 점검'}
-        </button>
+        </Button>
       </div>
 
       {!characterOptions.length && (
@@ -121,11 +134,11 @@ export function BossReadinessPanel({ characters }) {
                   </p>
                 </div>
                 <span
-                  className={
-                    check.passed ? 'boss-check-badge pass' : 'boss-check-badge fail'
-                  }
+                  className="boss-check-badge-wrap"
                 >
-                  {check.passed ? '통과' : '미달'}
+                  <Badge variant={check.passed ? 'success' : 'danger'}>
+                    {check.passed ? '통과' : '미달'}
+                  </Badge>
                 </span>
               </li>
             ))}
@@ -136,6 +149,7 @@ export function BossReadinessPanel({ characters }) {
           </div>
         </section>
       )}
-    </section>
+      </CardContent>
+    </Card>
   )
 }

@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getEngravingEffects } from '../utils/engraving'
+import { Button } from './ui/button'
 
 const TABS = [
   { id: 'equipment', label: '장비' },
   { id: 'engravings', label: '각인' },
   { id: 'gems', label: '보석' },
+  { id: 'ark', label: '아크' },
 ]
 
 function EquipmentTab({ equipment }) {
@@ -60,6 +62,87 @@ function GemsTab({ gems }) {
   )
 }
 
+function ArkTab({ arkPassive, arkGrid, engravings }) {
+  const points = Array.isArray(arkPassive?.ArkPassivePoints)
+    ? arkPassive.ArkPassivePoints
+    : []
+  const effects = [
+    ...(Array.isArray(arkPassive?.Effects) ? arkPassive.Effects : []),
+    ...(Array.isArray(engravings?.ArkPassiveEffects)
+      ? engravings.ArkPassiveEffects
+      : []),
+  ]
+  const gridItems = [
+    ...(Array.isArray(arkGrid?.Effects) ? arkGrid.Effects : []),
+    ...(Array.isArray(arkGrid?.Nodes) ? arkGrid.Nodes : []),
+    ...(Array.isArray(arkGrid?.Slots) ? arkGrid.Slots : []),
+    ...(Array.isArray(arkGrid?.Grids) ? arkGrid.Grids : []),
+    ...(Array.isArray(arkGrid?.Blocks) ? arkGrid.Blocks : []),
+    ...(Array.isArray(arkGrid?.ArkGridEffects) ? arkGrid.ArkGridEffects : []),
+    ...(Array.isArray(arkGrid?.Data) ? arkGrid.Data : []),
+  ]
+
+  if (!points.length && !effects.length && !gridItems.length) {
+    return <p className="detail-empty">아크 패시브/그리드 정보가 없습니다.</p>
+  }
+
+  return (
+    <div className="ark-detail-wrap">
+      {gridItems.length ? (
+        <>
+          <p className="ark-detail-title">아크 그리드</p>
+          <ul className="detail-list">
+            {gridItems.map((item, idx) => (
+              <li
+                key={`${item.Name || item.Type || 'grid'}-${idx}`}
+                className="detail-list-item"
+              >
+                <strong>{item.Name || item.Type || '그리드 노드'}</strong>
+                <span>
+                  {item.Value || item.Point || item.Level || item.Tier || '-'}
+                  {item.Description ? ` (${item.Description})` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+      {points.length ? (
+        <>
+          <p className="ark-detail-title">아크 그리드(포인트)</p>
+          <ul className="detail-list">
+            {points.map((point, idx) => (
+              <li
+                key={`${point.Name || point.Type || 'point'}-${idx}`}
+                className="detail-list-item"
+              >
+                <strong>{point.Name || point.Type || '포인트'}</strong>
+                <span>
+                  {point.Value || point.Point || point.Level || 0}
+                  {point.Description ? ` (${point.Description})` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+      {effects.length ? (
+        <>
+          <p className="ark-detail-title">아크 패시브 효과</p>
+          <ul className="detail-list">
+            {effects.map((effect, idx) => (
+              <li key={`${effect.Name || 'effect'}-${idx}`} className="detail-list-item">
+                <strong>{effect.Name || '-'}</strong>
+                <span>{effect.Description || effect.Grade || '-'}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+    </div>
+  )
+}
+
 export function CharacterDetailModal({
   open,
   character,
@@ -93,21 +176,29 @@ export function CharacterDetailModal({
             <h2>{title}</h2>
             <p>{character?.ServerName || '-'} / {character?.CharacterClassName || '-'}</p>
           </div>
-          <button type="button" className="modal-close" onClick={onClose}>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="modal-close"
+            onClick={onClose}
+          >
             닫기
-          </button>
+          </Button>
         </header>
 
         <div className="modal-tabs">
           {TABS.map((tab) => (
-            <button
+            <Button
               key={tab.id}
               type="button"
+              size="sm"
+              variant={activeTab === tab.id ? 'default' : 'secondary'}
               className={activeTab === tab.id ? 'modal-tab is-active' : 'modal-tab'}
               onClick={() => setActiveTab(tab.id)}
             >
               {tab.label}
-            </button>
+            </Button>
           ))}
         </div>
 
@@ -121,6 +212,13 @@ export function CharacterDetailModal({
               <EngravingsTab engravings={detail?.engravings} />
             )}
             {activeTab === 'gems' && <GemsTab gems={detail?.gems} />}
+            {activeTab === 'ark' && (
+              <ArkTab
+                arkPassive={detail?.arkPassive}
+                arkGrid={detail?.arkGrid}
+                engravings={detail?.engravings}
+              />
+            )}
           </div>
         )}
       </section>

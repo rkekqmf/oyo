@@ -1,3 +1,5 @@
+import { Button } from './ui/button'
+
 export function RecentSearches({ items, onSelect, onClear }) {
   if (!items.length) {
     return null
@@ -7,20 +9,28 @@ export function RecentSearches({ items, onSelect, onClear }) {
     <section className="recent-searches">
       <div className="recent-searches-header">
         <strong>최근 검색</strong>
-        <button type="button" className="recent-clear-button" onClick={onClear}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="recent-clear-button"
+          onClick={onClear}
+        >
           전체 삭제
-        </button>
+        </Button>
       </div>
       <div className="recent-searches-list">
         {items.map((item) => (
-          <button
+          <Button
             key={item}
             type="button"
+            variant="secondary"
+            size="sm"
             className="recent-item-button"
             onClick={() => onSelect(item)}
           >
             {item}
-          </button>
+          </Button>
         ))}
       </div>
     </section>
