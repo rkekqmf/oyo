@@ -25,10 +25,23 @@ const MARKET_CATEGORY_FALLBACK_CODES = [
   51000, // 기타 재료 계열
 ]
 
+const LOSTARK_FETCH_TIMEOUT_MS = 15000
+
 function getLostArkHeaders(token: string) {
   return {
     Authorization: `bearer ${token}`,
     Accept: 'application/json',
+  }
+}
+
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = LOSTARK_FETCH_TIMEOUT_MS) {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal })
+    return res
+  } finally {
+    clearTimeout(timeoutId)
   }
 }
 
@@ -487,9 +500,17 @@ app.get('/api/lostark/characters/:name', async (c) => {
 
   const url = `${LOSTARK_API_BASE_URL}/characters/${encodeURIComponent(name)}/siblings`
 
-  const res = await fetch(url, {
-    headers: getLostArkHeaders(token),
-  })
+  let res: Response
+  try {
+    res = await fetchWithTimeout(url, {
+      headers: getLostArkHeaders(token),
+    })
+  } catch (e) {
+    const message = e instanceof Error && e.name === 'AbortError'
+      ? '로스트아크 API 응답 시간 초과'
+      : e instanceof Error ? e.message : '로스트아크 API 요청 실패'
+    return c.json({ ok: false, error: message }, 504)
+  }
 
   if (!res.ok) {
     const text = await res.text()

@@ -19,11 +19,38 @@ async function request(path) {
   return payload
 }
 
-export async function fetchCharacterSiblings(name) {
-  const payload = await request(
-    `/api/lostark/characters/${encodeURIComponent(name)}`
+const FETCH_TIMEOUT_MS = 15000
+
+function fetchWithTimeout(url, options = {}, timeoutMs = FETCH_TIMEOUT_MS) {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+  return fetch(url, { ...options, signal: controller.signal }).finally(() =>
+    clearTimeout(timeoutId)
   )
-  return payload.data
+}
+
+/** 캐릭터 검색(동명이인 목록) - 1회 호출 */
+export async function fetchCharacterSiblings(name) {
+  const url = `${API_BASE_URL}/api/lostark/characters/${encodeURIComponent(name)}`
+  let res
+  try {
+    res = await fetchWithTimeout(url)
+  } catch (e) {
+    if (e?.name === 'AbortError') {
+      throw new Error('요청 시간이 초과되었습니다. 서버가 실행 중인지 확인해 주세요.')
+    }
+    throw new Error(e?.message || '네트워크 오류')
+  }
+  const payload = await res.json().catch(() => null)
+  if (!res.ok) {
+    throw new Error(
+      payload?.error || payload?.message || `요청 실패 (${res.status})`
+    )
+  }
+  if (payload?.ok === false && payload?.error) {
+    throw new Error(payload.error)
+  }
+  return Array.isArray(payload?.data) ? payload.data : payload?.data ?? []
 }
 
 export async function fetchCharacterArmory(name) {

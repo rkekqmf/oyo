@@ -13,6 +13,7 @@ import { ScoreRankPanel } from './components/ScoreRankPanel'
 import { RevenueEfficiencyPanel } from './components/RevenueEfficiencyPanel'
 import { CombatCalcPanel } from './components/CombatCalcPanel'
 import { HomeworkPanel } from './components/HomeworkPanel'
+import { LoginScreen } from './components/LoginScreen'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
 import { useCharacterSearch } from './hooks/useCharacterSearch'
 import { useFavorites } from './hooks/useFavorites'
@@ -28,6 +29,7 @@ const VIEWS = [
   { id: 'score', label: '점수·랭킹', adminOnly: true },
   { id: 'revenue', label: '효율', adminOnly: true },
   { id: 'combat', label: '전투·계산', adminOnly: true },
+  { id: 'login', label: '로그인' },
 ]
 
 function App() {
@@ -150,75 +152,115 @@ function App() {
 
         <TabsContent value="search">
           <section className="view-panel">
-          <CharacterSearchForm
-            name={name}
-            onNameChange={setName}
-            onSearch={search}
-            loading={loading}
-          />
-          <RecentSearches
-            items={recentSearches}
-            onSelect={(targetName) => {
-              setName(targetName)
-              search(targetName)
-            }}
-            onClear={clearRecentSearches}
-          />
-          <FavoriteCharacters
-            favorites={favorites}
-            onSelectCharacter={handleSelectCharacter}
-            isFavorite={isFavorite}
-            onToggleFavorite={toggleFavorite}
-          />
-          <MainCharacterPanel
-            character={mainCharacter}
-            detail={mainDetail}
-            insight={
-              mainCharacter
-                ? combatInsightsByKey[
-                    `${mainCharacter.CharacterName}:${mainCharacter.ServerName}`
-                  ]
-                : null
-            }
-            loading={mainDetailLoading}
-            error={mainDetailError}
-            expeditionCharacters={Array.isArray(result) ? result : []}
-            sasageLoading={sasageLoading}
-            sasageWarning={sasageWarning}
-            sasagePosts={sasagePosts}
-          />
-          <CharacterResult
-            error={error}
-            result={result}
-            loading={loading}
-            combatInsightsByKey={combatInsightsByKey}
-            onSelectCharacter={handleSelectCharacter}
-            isFavorite={isFavorite}
-            onToggleFavorite={toggleFavorite}
-          />
-          <CharacterComparePanel characters={availableCharacters} />
+            <div className="view-layout">
+              <div className="view-main">
+                <RecentSearches
+                  items={recentSearches}
+                  onSelect={(targetName) => {
+                    setName(targetName)
+                    search(targetName)
+                  }}
+                  onClear={clearRecentSearches}
+                />
+                <FavoriteCharacters
+                  favorites={favorites}
+                  onSelectCharacter={handleSelectCharacter}
+                  isFavorite={isFavorite}
+                  onToggleFavorite={toggleFavorite}
+                />
+                <MainCharacterPanel
+                  character={mainCharacter}
+                  detail={mainDetail}
+                  insight={
+                    mainCharacter
+                      ? combatInsightsByKey[
+                          `${mainCharacter.CharacterName}:${mainCharacter.ServerName}`
+                        ]
+                      : null
+                  }
+                  loading={mainDetailLoading}
+                  error={mainDetailError}
+                  expeditionCharacters={Array.isArray(result) ? result : []}
+                  sasageLoading={sasageLoading}
+                  sasageWarning={sasageWarning}
+                  sasagePosts={sasagePosts}
+                />
+                <CharacterResult
+                  error={error}
+                  result={result}
+                  loading={loading}
+                  combatInsightsByKey={combatInsightsByKey}
+                  onSelectCharacter={handleSelectCharacter}
+                  isFavorite={isFavorite}
+                  onToggleFavorite={toggleFavorite}
+                />
+                <CharacterComparePanel characters={availableCharacters} />
+              </div>
+              <aside className="view-aside">
+                <div className="view-remote-card">
+                  <h3 className="view-remote-title">캐릭터 검색</h3>
+                  <p className="view-remote-desc">이름으로 검색하면 결과가 왼쪽에 표시됩니다.</p>
+                  <CharacterSearchForm
+                    name={name}
+                    onNameChange={setName}
+                    onSearch={search}
+                    loading={loading}
+                  />
+                </div>
+              </aside>
+            </div>
           </section>
         </TabsContent>
 
         <TabsContent value="homework">
-          <HomeworkPanel />
+          <HomeworkPanel onNavigateLogin={() => setActiveView('login')} />
         </TabsContent>
 
         <TabsContent value="market">
           <section className="view-panel">
-            <AuctionMarketPanel />
+            <div className="view-layout">
+              <div className="view-main">
+                <AuctionMarketPanel />
+              </div>
+              <aside className="view-aside">
+                <div className="view-remote-card">
+                  <h3 className="view-remote-title">경매장 추이</h3>
+                  <p className="view-remote-desc">가격 추이를 확인할 수 있습니다.</p>
+                </div>
+              </aside>
+            </div>
           </section>
         </TabsContent>
 
         <TabsContent value="boss">
           <section className="view-panel">
-            <BossReadinessPanel characters={availableCharacters} />
+            <div className="view-layout">
+              <div className="view-main">
+                <BossReadinessPanel characters={availableCharacters} />
+              </div>
+              <aside className="view-aside">
+                <div className="view-remote-card">
+                  <h3 className="view-remote-title">보스 준비도</h3>
+                  <p className="view-remote-desc">캐릭터별 보스 준비 상태를 확인합니다.</p>
+                </div>
+              </aside>
+            </div>
           </section>
         </TabsContent>
 
         <TabsContent value="score">
           <section className="view-panel">
-            <ScoreRankPanel />
+            <div className="view-layout">
+              <div className="view-main">
+                <ScoreRankPanel />
+              </div>
+              <aside className="view-aside">
+                <div className="view-remote-card">
+                  <h3 className="view-remote-title">점수·랭킹</h3>
+                  <p className="view-remote-desc">점수와 랭킹 정보를 확인합니다.</p>
+                </div>
+              </aside>
+            </div>
           </section>
         </TabsContent>
 
@@ -230,8 +272,22 @@ function App() {
 
         <TabsContent value="combat">
           <section className="view-panel">
-            <CombatCalcPanel />
+            <div className="view-layout">
+              <div className="view-main">
+                <CombatCalcPanel />
+              </div>
+              <aside className="view-aside">
+                <div className="view-remote-card">
+                  <h3 className="view-remote-title">전투·계산</h3>
+                  <p className="view-remote-desc">전투 관련 계산 도구입니다.</p>
+                </div>
+              </aside>
+            </div>
           </section>
+        </TabsContent>
+
+        <TabsContent value="login">
+          <LoginScreen />
         </TabsContent>
       </Tabs>
 

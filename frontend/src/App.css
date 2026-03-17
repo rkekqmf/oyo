@@ -60,6 +60,16 @@ body {
   pointer-events: none;
 }
 
+/* 전체 타이포 정책: bold 사용 안 함 */
+#root,
+#root * {
+  font-weight: 400 !important;
+}
+#root strong,
+#root b {
+  font-weight: 400 !important;
+}
+
 .ui-button {
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -196,6 +206,9 @@ body {
   max-width: 1040px;
   margin: 0 auto;
   padding: 32px 20px 40px;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .app-header {
@@ -269,12 +282,114 @@ body {
 
 .ui-tabs-content {
   margin-top: 0;
+  width: 100%;
+  min-width: 0;
 }
 
 .view-panel {
   animation: fade-in 0.22s ease;
   display: grid;
   gap: 14px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* 공통: 좌측 본문 + 우측 리모컨 레이아웃 */
+.view-layout {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
+  align-items: start;
+  min-width: 0;
+  width: 100%;
+}
+.view-main {
+  min-width: 0;
+}
+.view-aside {
+  position: sticky;
+  top: 0;
+  width: 168px;
+  min-width: 168px;
+}
+.view-remote-card {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-sizing: border-box;
+  width: 100%;
+}
+.view-remote-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--text);
+}
+.view-remote-desc {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+.view-remote-card .search-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.view-remote-card .search-form .search-input {
+  width: 100%;
+  min-width: 0;
+}
+
+/* 숙제: 좌측 본문 + 우측 리모컨 */
+.homework-layout {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
+  align-items: start;
+  min-width: 0;
+  width: 100%;
+}
+.homework-main {
+  min-width: 0;
+}
+.homework-aside {
+  position: sticky;
+  top: 0;
+  width: 180px;
+  min-width: 180px;
+}
+.homework-remote {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  overflow: visible;
+  width: 100%;
+  box-sizing: border-box;
+}
+.homework-remote-title {
+  font-size: 16px;
+}
+.homework-remote-desc {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.homework-remote-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+}
+.homework-remote-actions .homework-toolbar-btn {
+  width: 100%;
+  justify-content: center;
+}
+.homework-remote-actions .homework-toolbar-toggle {
+  width: 100%;
+}
+.homework-remote-actions .homework-toolbar-toggle-btn {
+  flex: 1;
 }
 
 /* 수익·효율: 좌측 본문(늘어남) + 우측 리모컨(필요 너비만) */
@@ -291,7 +406,7 @@ body {
 
 .efficiency-aside {
   position: sticky;
-  top: 12px;
+  top: 0;
   width: 168px;
   min-width: 168px;
 }
@@ -2235,6 +2350,10 @@ body {
 /* 숙제 패널 (캐릭터별) */
 .homework-panel {
   display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
 }
 .homework-register-card {
   background: var(--surface);
@@ -2257,6 +2376,176 @@ body {
 }
 .homework-toolbar {
   margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.homework-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-mid);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.homework-toolbar-btn:hover:not(:disabled) {
+  background: var(--bg-strong);
+  border-color: var(--border-strong);
+}
+.homework-toolbar-btn-register,
+.homework-toolbar-btn-expedition {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+.homework-toolbar-btn-register:hover:not(:disabled),
+.homework-toolbar-btn-expedition:hover:not(:disabled) {
+  background: var(--success-bg);
+  color: var(--primary-strong);
+}
+.homework-toolbar-btn-expedition:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.homework-toolbar-btn-extra {
+  /* 기본 툴바 버튼 스타일 유지 */
+}
+.homework-toolbar-btn-login-required {
+  position: relative;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.homework-toolbar-btn-login-required:hover:not(:disabled) {
+}
+.homework-toolbar-btn-login-required.is-shake {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.6);
+  animation: homework-login-shake 0.2s ease;
+}
+.homework-toolbar-btn-inactive-feedback.is-shake {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.6);
+  animation: homework-login-shake 0.2s ease;
+}
+@keyframes homework-login-shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  50% { transform: translateX(3px); }
+  75% { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+.homework-toolbar-toggle {
+  display: flex;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.homework-mode-switch {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  width: 100%;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-mid);
+  color: var(--text);
+  cursor: pointer;
+  padding: 2px;
+  overflow: hidden;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+.homework-mode-switch:hover {
+  border-color: var(--border-strong);
+}
+.homework-mode-switch-label {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  user-select: none;
+}
+.homework-mode-switch.is-compact .homework-mode-switch-label.is-left,
+.homework-mode-switch.is-detailed .homework-mode-switch-label.is-right {
+  color: var(--bg-dark);
+}
+.homework-mode-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: calc(50% - 2px);
+  height: calc(100% - 4px);
+  border-radius: 8px;
+  background: var(--btn-cream);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  transition: transform 0.22s ease;
+}
+.homework-mode-switch.is-detailed .homework-mode-switch-thumb {
+  transform: translateX(100%);
+}
+.homework-toolbar-toggle-btn {
+  border: none;
+  border-radius: 0;
+  min-width: 0;
+  padding: 0 12px;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.18s ease;
+}
+.homework-toolbar-toggle-btn + .homework-toolbar-toggle-btn {
+  border-left: 1px solid var(--border);
+}
+.homework-toolbar-toggle-btn:active {
+  transform: translateY(1px);
+}
+.homework-toolbar-toggle-btn.is-active {
+  background: var(--primary);
+  color: var(--primary-fg, #fff);
+  border-color: var(--primary);
+}
+.homework-toolbar-toggle-btn.is-active + .homework-toolbar-toggle-btn {
+  border-left-color: var(--primary);
+}
+.homework-btn-add-expedition {
+  width: auto;
+  height: 40px;
+  padding: 0 14px;
+  color: var(--primary);
+  border-color: var(--primary);
+  font-size: 13px;
+}
+.homework-btn-add-expedition:hover:not(:disabled) {
+  background: var(--success-bg);
+  color: var(--primary-strong);
+}
+.homework-toolbar-expedition-label {
+  font-weight: 500;
+}
+.homework-expedition-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--point) 14%, var(--bg-mid));
+  border: 1px solid color-mix(in srgb, var(--point) 48%, var(--border));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--point) 76%, #ffffff);
+  flex-shrink: 0;
+}
+.homework-expedition-card .homework-char-level {
+  font-size: 12px;
+  color: var(--muted);
 }
 .homework-search-item-left {
   display: flex;
@@ -2278,8 +2567,8 @@ body {
   flex-shrink: 0;
   border-radius: 8px;
   overflow: hidden;
-  background: var(--bg-mid);
-  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--point) 12%, var(--bg-mid));
+  border: 1px solid color-mix(in srgb, var(--point) 45%, var(--border));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2287,6 +2576,7 @@ body {
 .homework-class-img {
   display: block;
   object-fit: cover;
+  filter: brightness(0) saturate(100%) invert(84%) sepia(19%) saturate(399%) hue-rotate(357deg) brightness(92%) contrast(89%);
 }
 .homework-class-fallback {
   align-items: center;
@@ -2298,14 +2588,14 @@ body {
 .homework-class-logo {
   flex-shrink: 0;
   border-radius: 8px;
-  background: var(--bg-mid);
-  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--point) 12%, var(--bg-mid));
+  border: 1px solid color-mix(in srgb, var(--point) 45%, var(--border));
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 11px;
   font-weight: 700;
-  color: var(--text);
+  color: color-mix(in srgb, var(--point) 76%, #ffffff);
 }
 .homework-register-content {
   display: flex;
@@ -2405,6 +2695,10 @@ body {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  transition: opacity 0.18s ease;
 }
 .homework-server-group {
   display: flex;
@@ -2420,30 +2714,217 @@ body {
   padding: 4px 0;
   border-bottom: 1px solid var(--border);
 }
+/* 기본 그리드(매asonry 아님 시) */
 .homework-char-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
+  transition: opacity 0.4s ease;
 }
-@media (min-width: 900px) {
-  .homework-char-grid {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 14px;
+/* 행 우선 그리드: 같은 행은 가장 긴 카드 기준으로 높이 맞춤 */
+.homework-char-grid-masonry {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: stretch;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  height: auto;
+}
+.homework-char-grid-masonry:empty {
+  height: 0;
+}
+.homework-char-grid-masonry .homework-char-card-wrap,
+.homework-char-grid-masonry .homework-card-flip-wrap .homework-char-card-wrap {
+  flex-shrink: 0;
+  width: var(--masonry-card-width-px, 280px);
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.homework-char-grid-masonry .homework-card-flip-wrap .homework-char-card-wrap {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+.homework-char-grid-masonry .homework-char-card-wrap .homework-char-card,
+.homework-char-grid-masonry .homework-char-card-wrap .ui-card,
+.homework-char-grid-masonry .homework-card-flip-wrap .homework-char-card-wrap .homework-char-card,
+.homework-char-grid-masonry .homework-card-flip-wrap .homework-char-card-wrap .ui-card {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.homework-char-grid-masonry .homework-char-card-wrap .homework-char-card > div:first-child,
+.homework-char-grid-masonry .homework-char-card-wrap .ui-card > div:first-child,
+.homework-char-grid-masonry .homework-card-flip-wrap .homework-char-card-wrap .homework-char-card > div:first-child,
+.homework-char-grid-masonry .homework-card-flip-wrap .homework-char-card-wrap .ui-card > div:first-child {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.homework-char-grid-masonry .homework-char-card .homework-char-content,
+.homework-char-grid-masonry .homework-card-flip-wrap .homework-char-card .homework-char-content {
+  flex: 1;
+  min-height: 0;
+}
+.homework-char-list-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.homework-panel-compact .homework-char-card {
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+.homework-char-row-compact {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+.homework-char-compact-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.homework-panel-compact .homework-char-compact-left .homework-char-title {
+  font-size: 13px;
+}
+.homework-panel-compact .homework-char-compact-left .homework-char-level {
+  font-size: 11px;
+}
+.homework-char-compact-buttons {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.homework-char-compact-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+.homework-panel-compact .homework-btn-chip {
+  white-space: nowrap;
+  padding-inline: 6px;
+  padding-block: 3px;
+  font-size: 11px;
+}
+.homework-char-header-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 3px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.homework-char-header-actions .homework-btn-icon {
+  width: 28px;
+  height: 28px;
+}
+.homework-btn-quick {
+  color: var(--primary);
+}
+.homework-btn-graph {
+  color: var(--point);
+}
+.homework-btn-checkall {
+  color: var(--primary-strong);
+}
+.homework-char-grid .homework-char-card-wrap {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.homework-char-card-wrap {
+  position: relative;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  overflow: visible;
+}
+.homework-char-card-wrap.is-complete-animating .homework-char-card-dimmed {
+  pointer-events: none;
+  transition: filter 0.4s ease, opacity 0.4s ease;
+  filter: brightness(0.5);
+  opacity: 0.85;
+}
+.homework-char-card-wrap.is-sliding {
+  transition: transform 0.9s cubic-bezier(0.25, 0.1, 0.25, 1);
+  z-index: 10;
+}
+.homework-char-card-placeholder {
+  visibility: hidden;
+  pointer-events: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius);
+}
+.homework-char-card-complete-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  pointer-events: auto;
+  cursor: pointer;
+  animation: homework-complete-overlay 0.5s ease 0.15s both;
+}
+.homework-char-card-complete-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(74, 156, 72, 0.95);
+  color: #fff;
+  box-shadow: 0 0 20px rgba(74, 156, 72, 0.5);
+}
+.homework-char-card-complete-check svg {
+  width: 32px;
+  height: 32px;
+}
+@keyframes homework-complete-overlay {
+  from {
+    opacity: 0;
   }
-}
-@media (min-width: 1200px) {
-  .homework-char-grid {
-    grid-template-columns: repeat(4, 1fr);
+  to {
+    opacity: 1;
   }
 }
 .homework-char-card {
-  background: var(--surface);
+  position: relative;
+  background: transparent;
   border: 1px solid var(--border-strong);
+  transition: box-shadow 0.3s ease;
+  box-shadow: 0 0 8px rgba(234, 234, 222, 0.08), 0 0 4px rgba(242, 244, 233, 0.06);
+}
+.homework-char-card.is-all-complete {
+  box-shadow: none;
 }
 .homework-char-header {
   padding: 10px 12px 8px;
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 8px;
+}
+.homework-char-header-main {
+  flex: 1 1 100%;
+}
+.homework-char-header-meta {
+  width: 100%;
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
@@ -2453,6 +2934,90 @@ body {
   align-items: center;
   gap: 10px;
   min-width: 0;
+}
+.homework-char-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.homework-progress-ring {
+  position: relative;
+  width: 36px;
+  height: 36px;
+}
+.homework-progress-ring svg {
+  width: 100%;
+  height: 100%;
+  transition: filter 0.35s ease;
+}
+.homework-progress-ring-dailyweekly svg {
+  filter: drop-shadow(0 0 0 transparent);
+}
+.homework-progress-ring-bg {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+.homework-progress-fill {
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.35s ease, stroke-dashoffset 0.35s ease;
+}
+.homework-section-daily .ui-card-description {
+  color: var(--homework-daily-color, #4a9c48);
+}
+.homework-progress-fill-daily {
+  stroke: var(--homework-daily-color, #4a9c48);
+}
+.homework-section-weekly .ui-card-description {
+  color: var(--homework-weekly-color, #5b7fb8);
+}
+.homework-progress-fill-weekly {
+  stroke: var(--homework-weekly-color, #5b7fb8);
+}
+.homework-section-raid .ui-card-description {
+  color: var(--homework-raid-color, #b8860b);
+}
+.homework-progress-fill-raid {
+  stroke: var(--homework-raid-color, #b8860b);
+}
+.homework-progress-ring.is-complete .homework-progress-ring-bg {
+  stroke-width: 2;
+  transition: stroke 0.35s ease;
+}
+.homework-progress-ring-dailyweekly.is-complete .homework-progress-ring-bg {
+  stroke: transparent;
+}
+.homework-progress-ring-edge {
+  fill: none;
+  stroke-width: 2;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.homework-progress-ring-dailyweekly .homework-progress-edge-daily {
+  stroke: var(--homework-daily-color, #4a9c48);
+  filter: drop-shadow(0 0 4px rgba(74, 156, 72, 0.7));
+}
+.homework-progress-ring-dailyweekly .homework-progress-edge-weekly {
+  stroke: var(--homework-weekly-color, #5b7fb8);
+  filter: drop-shadow(0 0 4px rgba(91, 127, 184, 0.7));
+}
+.homework-progress-ring-dailyweekly.is-complete .homework-progress-edge-daily,
+.homework-progress-ring-dailyweekly.is-complete .homework-progress-edge-weekly {
+  opacity: 1;
+}
+.homework-progress-ring-dailyweekly.is-complete svg {
+  filter: drop-shadow(0 0 6px rgba(74, 156, 72, 0.35)) drop-shadow(0 0 6px rgba(91, 127, 184, 0.35));
+}
+.homework-progress-ring-raid svg {
+  filter: drop-shadow(0 0 0 transparent);
+}
+.homework-progress-ring-raid.is-complete .homework-progress-ring-bg {
+  stroke: var(--homework-raid-color, #b8860b);
+}
+.homework-progress-ring-raid.is-complete svg {
+  filter: drop-shadow(0 0 6px rgba(184, 134, 11, 0.5)) drop-shadow(0 0 10px rgba(184, 134, 11, 0.3));
 }
 .homework-char-class-logo {
   flex-shrink: 0;
@@ -2476,7 +3041,7 @@ body {
   gap: 2px;
 }
 .homework-char-title {
-  font-size: 15px;
+  font-size: 13px;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -2554,66 +3119,1104 @@ body {
 .homework-char-content {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0;
   padding-top: 0;
 }
 .homework-char-section {
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 8px 10px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding: 10px 0;
+  margin: 0;
+}
+.homework-char-section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 .homework-char-section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: 8px;
   margin-bottom: 6px;
 }
 .homework-char-section-head .ui-button {
   flex-shrink: 0;
 }
-.homework-raid-section {
+.homework-char-section-head [data-slot="description"] {
+  font-size: 12px;
+  color: var(--text-muted, #888);
+}
+.homework-char-section-compact .homework-char-section-head {
+  margin-bottom: 6px;
+}
+.homework-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+.homework-btn-chip {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, background 0.15s;
+}
+.homework-btn-chip:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-light);
+}
+.homework-btn-chip.is-checked {
   border-color: var(--primary);
-  background: rgba(124, 184, 122, 0.06);
+  background: rgba(124, 184, 122, 0.25);
+  color: var(--text);
+}
+.homework-raid-section {
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+.homework-raid-section .homework-char-section-head {
+  margin-bottom: 8px;
+}
+.homework-raid-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.homework-btn-edit {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  min-height: 28px;
+  border-radius: 8px;
+}
+.homework-raid-list {
+  gap: 0;
+  padding: 0;
+}
+.homework-raid-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  list-style: none;
+}
+.homework-raid-row:last-child {
+  border-bottom: none;
+}
+.homework-raid-row .homework-item-label {
+  flex: 1;
+  min-width: 0;
+}
+.homework-raid-row-display {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 10px 0;
+  min-height: 44px;
+  cursor: pointer;
+}
+.homework-raid-row-display:hover {
+  background: rgba(124, 184, 122, 0.08);
+}
+.homework-raid-row-display.is-checked {
+  background: rgba(124, 184, 122, 0.2);
+}
+.homework-raid-row-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.homework-raid-row-main .homework-item-label {
+  flex: 1;
+  min-width: 0;
+}
+.homework-raid-gold {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 12px;
+}
+.homework-raid-gold-sep {
+  color: var(--text-muted, #888);
+  margin: 0 2px;
+}
+.homework-raid-gold-item {
+  white-space: nowrap;
+}
+.homework-gold {
+  color: var(--primary);
+  font-weight: 600;
+}
+.homework-bound-gold {
+  color: var(--text-muted, #888);
+}
+.homework-raid-busfee {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.homework-raid-busfee-label {
+  color: var(--text-muted, #888);
+  flex-shrink: 0;
+}
+.homework-raid-busfee-input {
+  width: 80px;
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+}
+.homework-raid-busfee-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+.homework-raid-busfee-unit {
+  color: var(--text-muted, #888);
+  flex-shrink: 0;
+}
+.homework-raid-busfee-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.homework-raid-busrole {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.homework-raid-busrole-label {
+  color: var(--text-muted, #888);
+  flex-shrink: 0;
+}
+.homework-raid-busrole-btns {
+  display: flex;
+  gap: 4px;
+}
+.homework-raid-busrole-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.homework-raid-busrole-btn:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-light);
+}
+.homework-raid-busrole-btn.is-active {
+  border-color: var(--homework-raid-color, #b8860b);
+  background: rgba(184, 134, 11, 0.15);
+  color: var(--homework-raid-color, #b8860b);
+}
+.homework-raid-total-gold {
+  font-size: 12px;
+  color: var(--text);
+}
+.homework-raid-total-gold strong {
+  color: var(--primary);
+  font-weight: 700;
+}
+.homework-raid-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: var(--bg-light);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.homework-raid-badge-single {
+  border-color: var(--primary);
+  background: rgba(124, 184, 122, 0.2);
+}
+.homework-raid-badge-bus {
+  border-color: var(--border-strong);
+  background: rgba(0, 0, 0, 0.05);
+}
+.homework-raid-mode-btns {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.homework-raid-mode-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.homework-raid-mode-btn:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-light);
+}
+.homework-raid-mode-btn.is-active {
+  border-color: var(--primary);
+  background: rgba(124, 184, 122, 0.25);
+  color: var(--text);
+}
+.homework-raid-empty {
+  margin: 0;
+  padding: 12px 0;
+  font-size: 12px;
+  color: var(--text-muted, #888);
+  list-style: none;
+}
+.homework-raid-modal {
+  max-width: 320px;
+}
+.homework-raid-modal-row.is-selected {
+  background: rgba(124, 184, 122, 0.2);
+  border-color: var(--primary);
+}
+.homework-raid-modal-presets {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.homework-raid-modal-list {
+  list-style: none;
+  margin: 0 0 16px 0;
+  padding: 0;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.homework-raid-modal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 4px 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  list-style: none;
+}
+.homework-raid-modal-row .homework-item-label,
+.homework-raid-modal-row-label {
+  flex: 1;
+  min-width: 0;
+}
+.homework-raid-modal-row {
+  cursor: pointer;
+}
+.homework-raid-modal-row .homework-raid-mode-btns {
+  flex-shrink: 0;
+}
+.homework-raid-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.homework-order-modal-list {
+  list-style: none;
+  margin: 0 0 16px 0;
+  padding: 0;
+  overflow: visible;
+}
+.homework-order-modal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 14px 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+.homework-order-modal-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+}
+.homework-order-expedition-icon {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  background: var(--bg-mid);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+}
+.homework-order-modal-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+.homework-order-modal-level {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted, #888);
+}
+.homework-order-modal-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+.homework-order-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.homework-order-move-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-mid);
+  color: var(--text);
+  cursor: pointer;
+}
+.homework-order-move-btn:hover:not(:disabled) {
+  background: var(--bg-strong);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.homework-order-move-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.homework-order-modal-list-draggable {
+  padding: 4px 4px 2px;
+  overflow: visible;
+}
+.homework-order-modal-list-draggable .homework-order-modal-row {
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  width: 100%;
+  box-sizing: border-box;
+  max-height: 120px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  transition: max-height 0.26s ease,
+    transform 0.26s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    box-shadow 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    margin 0.26s ease,
+    padding 0.26s ease;
+}
+.homework-order-modal-list-draggable .homework-order-modal-row:last-child {
+  margin-bottom: 0;
+}
+.homework-order-modal-list-draggable .homework-order-modal-row .homework-order-modal-row-content {
+  padding: 8px 12px;
+}
+.homework-order-modal-list-draggable .homework-order-modal-row:hover {
+  background: transparent;
+}
+.homework-order-modal-list-draggable .homework-order-modal-row:hover .homework-order-modal-row-content {
+  background: var(--bg-light);
+}
+.homework-order-modal-list-draggable .homework-order-modal-row:active {
+  cursor: grabbing;
+}
+/* 삽입 구간: 행 사이 14px 간격 정중앙에 선 표시 (위쪽 행 margin에 겹치게) */
+.homework-order-modal-insert-gap {
+  list-style: none;
+  height: 14px;
+  min-height: 14px;
+  max-height: 14px;
+  margin: -14px 0 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: stretch;
+  flex-shrink: 0;
+  cursor: default;
+  border: none;
+  background: transparent;
+  pointer-events: auto;
+}
+.homework-order-modal-insert-gap .homework-order-modal-insert-line {
+  display: block;
+  height: 2px;
+  min-height: 2px;
+  width: 80px;
+  max-width: 80px;
+  margin: 0 auto;
+  border-radius: 1px;
+  background: var(--primary);
+  opacity: 0.95;
+  box-shadow: 0 0 0 1px rgba(124, 184, 122, 0.35);
+}
+.homework-order-modal-insert-line {
+  display: block;
+  height: 2px;
+  min-height: 2px;
+  width: 80px;
+  max-width: 80px;
+  margin: 0 auto;
+  border-radius: 1px;
+  background: var(--primary);
+  opacity: 0.95;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px rgba(124, 184, 122, 0.3);
+}
+.homework-order-modal-row.is-exp-fixed {
+  cursor: default;
+}
+.homework-order-modal-row.is-exp-fixed .homework-order-modal-drag-handle {
+  display: none;
+}
+/* 드래그 중인 행: 자리 유지(높이 그대로), 내용만 비움 → 다른 행이 움직이지 않아 요동 없음 */
+.homework-order-modal-row.is-dragging.is-placeholder {
+  pointer-events: none;
+  cursor: default;
+  min-height: 44px;
+  overflow: hidden;
+  border: 1px dashed var(--border);
+  background: transparent;
+}
+.homework-order-modal-row.is-dragging.is-placeholder .homework-order-modal-row-content {
+  padding: 8px 12px;
+  min-height: 0;
+  opacity: 0;
+  visibility: hidden;
+}
+.homework-order-modal-row.is-swap-target {
+  background: var(--primary-subtle, rgba(124, 184, 122, 0.15));
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary);
+  outline: none;
+}
+.homework-order-modal-row.is-swap-target .homework-order-modal-row-content {
+  background: transparent;
+}
+.homework-order-modal-content {
+  overflow: visible;
+}
+.homework-order-modal .modal-content {
+  overflow: visible;
+}
+
+/* 카드 뒤집기: 3D 대신 페이드+스케일로 보더 잘림 없음, 같은 행 높이 맞춤 */
+.homework-char-grid-masonry .homework-card-flip-wrap {
+  flex-shrink: 0;
+  align-self: stretch;
+  width: var(--masonry-card-width-px, 280px);
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.homework-card-flip-wrap {
+  width: 100%;
+  min-width: 0;
+}
+.homework-card-flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.homework-card-flip-front {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  transition: opacity 0.22s ease;
+}
+.homework-card-flip-wrap.is-flipped .homework-card-flip-front {
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+}
+.homework-card-flip-front .homework-char-card-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.homework-card-flip-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+.homework-card-flip-wrap.is-flipped .homework-card-flip-back {
+  position: relative;
+  inset: auto;
+  flex: 1;
+  min-height: 0;
+  opacity: 1;
+  pointer-events: auto;
+}
+.homework-card-flip-back .homework-char-card,
+.homework-card-flip-back .ui-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+  border: 1px solid var(--border-strong);
+  box-sizing: border-box;
+}
+.homework-card-flip-back .homework-card-graph-back {
+  flex: 1;
+  min-height: 0;
+  align-self: stretch;
+}
+.homework-card-graph-back .homework-char-header {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.homework-card-graph-back .homework-char-title {
+  flex: 1;
+  min-width: 0;
+}
+.homework-card-graph-head-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  width: 100%;
+}
+.homework-card-graph-head-meta {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.homework-card-graph-char-info {
+  width: 100%;
+}
+.homework-card-graph-char-info .homework-char-title {
+  font-size: 13px;
+}
+.homework-card-graph-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.homework-card-graph-period-label {
+  font-size: 11px;
+  color: var(--muted);
+}
+.homework-card-graph-content {
+  padding-top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: visible;
+  height: 100%;
+}
+.homework-card-graph-scrollzone {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  height: 100%;
+  overflow: visible;
+}
+.homework-card-graph-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.homework-card-graph-section + .homework-card-graph-section {
+  margin-top: 0;
+}
+.homework-card-graph-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.homework-card-graph-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.homework-card-daily-strip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+.homework-card-graph-hover-readout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.homework-card-graph-hover-readout strong {
+  color: var(--text);
+  font-size: 12px;
+}
+.homework-card-daily-cell {
+  width: 100%;
+  height: 14px;
+  border-radius: 3px;
+  background: rgba(234, 234, 222, 0.16);
+  border: 1px solid rgba(234, 234, 222, 0.12);
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+.homework-card-daily-cell:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+.homework-card-daily-cell.is-done {
+  background: rgba(124, 184, 122, 0.88);
+  border-color: rgba(124, 184, 122, 0.65);
+}
+.homework-card-daily-cell.is-miss {
+  background: rgba(234, 234, 222, 0.12);
+}
+.homework-card-graph-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.homework-card-graph-axis {
+  display: flex;
+  justify-content: space-between;
+  margin: 2px 0 4px;
+}
+.homework-card-graph-axis.axis-edge {
+  margin: 0;
+}
+.homework-card-graph-axis-tick {
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: var(--muted);
+}
+.homework-card-graph-label {
+  flex: 0 0 44px;
+  color: var(--muted);
+}
+.homework-card-graph-bar-bg {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  border-radius: 4px;
+  overflow: visible;
+}
+.homework-card-graph-line {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.homework-card-graph-line-path {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.homework-card-graph-line-path.is-gold {
+  stroke: var(--accent, #fbbf24);
+}
+.homework-card-graph-line-path.is-daily {
+  stroke: var(--primary);
+}
+.homework-card-graph-line-path.is-weekly {
+  stroke: #3b82f6;
+}
+.homework-card-graph-line-path.is-raid {
+  stroke: #ec4899;
+}
+.homework-card-graph-microbars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  padding-inline: 2px;
+}
+.homework-card-graph-microbar {
+  flex: 1;
+  max-width: 6px;
+  margin-inline: 1px;
+  border-radius: 999px;
+  background: var(--bg-mid);
+}
+.homework-card-graph-microbar.is-daily {
+  background: var(--primary);
+}
+.homework-card-graph-microbar.is-weekly {
+  background: #3b82f6;
+}
+.homework-card-graph-microbar.is-raid {
+  background: #ec4899;
+}
+.homework-card-graph-value {
+  flex: 0 0 52px;
+  text-align: right;
+  font-weight: 600;
+  color: var(--text);
+  font-size: 12px;
+}
+.homework-card-weekly-gold-panel {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.08);
+}
+.homework-card-weekly-gold-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.homework-card-weekly-gold-head strong {
+  font-size: 12px;
+  color: var(--text);
+}
+.homework-card-weekly-gold-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  min-height: 44px;
+  height: 44px;
+}
+.homework-card-weekly-gold-line-wrap {
+  width: 100%;
+  height: 64px;
+  position: relative;
+}
+.homework-card-weekly-gold-plot {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: visible;
+  border-radius: 0;
+  background: transparent;
+}
+.homework-card-weekly-gold-line {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+.homework-card-weekly-gold-guide {
+  stroke: rgba(234, 234, 222, 0.12);
+  stroke-width: 1;
+}
+.homework-card-weekly-gold-area {
+  fill: rgba(251, 191, 36, 0.14);
+}
+.homework-card-weekly-gold-path {
+  fill: none;
+  stroke: #f6b326;
+  stroke-width: 2.4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.homework-card-weekly-gold-point {
+  fill: #fbbf24;
+  stroke: rgba(18, 20, 21, 0.9);
+  stroke-width: 1;
+}
+.homework-card-weekly-gold-hitzones {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+.homework-card-weekly-gold-hit {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.homework-card-weekly-gold-hit.is-active {
+  background: rgba(255, 255, 255, 0.03);
+}
+.homework-card-weekly-gold-cursor {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 221, 137, 0.8);
+  background: #f6b326;
+  box-shadow: 0 0 0 2px rgba(246, 179, 38, 0.16);
+  transform: translate(-50%, -50%);
+  transition: left 0.24s cubic-bezier(0.2, 0.9, 0.2, 1), top 0.24s cubic-bezier(0.2, 0.9, 0.2, 1);
+  pointer-events: none;
+}
+.homework-card-weekly-gold-overlay {
+  position: absolute;
+  top: -24px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(234, 234, 222, 0.22);
+  background: rgba(16, 20, 22, 0.9);
+  font-size: 10px;
+  color: var(--muted);
+  pointer-events: none;
+  white-space: nowrap;
+  transition: left 0.24s cubic-bezier(0.2, 0.9, 0.2, 1), opacity 0.16s ease;
+}
+.homework-card-weekly-gold-overlay strong {
+  color: #ffd977;
+  font-size: 11px;
+}
+.homework-card-weekly-gold-labels {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 4px;
+}
+.homework-card-weekly-gold-label-btn {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.homework-card-weekly-gold-label-btn.is-active .homework-card-weekly-gold-label {
+  color: var(--text);
+  font-weight: 600;
+}
+.homework-card-weekly-gold-label {
+  display: block;
+  min-width: 0;
+  text-align: center;
+  font-size: 8px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.homework-card-weekly-gold-bar {
+  flex: 1;
+  border-radius: 4px 4px 2px 2px;
+  background: linear-gradient(180deg, #fbbf24, #f59e0b);
+  min-width: 0;
+  transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.homework-card-weekly-gold-bar:hover,
+.homework-card-weekly-gold-bar.is-active {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.4);
+}
+.homework-card-weekly-rate-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.homework-card-weekly-rate-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.06);
+}
+.homework-card-weekly-rate-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.homework-card-weekly-rate-head strong {
+  font-size: 12px;
+  color: var(--text);
+}
+.homework-card-weekly-rate-track {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(234, 234, 222, 0.18);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.homework-card-weekly-rate-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+.homework-card-weekly-rate-fill.is-weekly {
+  background: #3b82f6;
+}
+.homework-card-weekly-rate-fill.is-raid {
+  background: #ec4899;
+}
+.homework-card-weekly-mini-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 22px;
+}
+.homework-card-weekly-mini-bar {
+  flex: 1;
+  min-width: 0;
+  border-radius: 999px;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.homework-card-weekly-mini-bar.is-weekly {
+  background: #3b82f6;
+}
+.homework-card-weekly-mini-bar.is-raid {
+  background: #ec4899;
+}
+.homework-card-weekly-mini-bar:hover,
+.homework-card-weekly-mini-bar.is-active {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+.homework-card-graph-mock {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+.homework-card-graph-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.login-screen-card {
+  max-width: 520px;
+}
+.login-screen-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.login-screen-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.login-screen-actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 6px;
+}
+.homework-order-modal-row.is-just-dropped {
+  animation: homework-order-dropped 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes homework-order-dropped {
+  0% { transform: scale(1.02); box-shadow: 0 6px 20px rgba(124, 184, 122, 0.25); }
+  100% { transform: scale(1); box-shadow: none; }
+}
+.homework-order-modal-row-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+.homework-order-modal-drag-handle {
+  flex-shrink: 0;
+  color: var(--text-muted, #888);
+  font-size: 14px;
+  letter-spacing: -0.2em;
+  user-select: none;
+  padding: 4px 0;
+}
+.homework-order-modal-list-draggable .homework-order-modal-row:hover .homework-order-modal-drag-handle {
+  color: var(--text);
 }
 .homework-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
-.homework-item {
+.homework-item-row {
   margin: 0;
-  padding: 4px 0;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  gap: 10px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
 }
-.homework-item:last-child {
+.homework-item-row:hover {
+  background: rgba(124, 184, 122, 0.12);
+}
+.homework-item-row:last-child {
   border-bottom: none;
 }
-.homework-toggle {
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  border: 2px solid var(--border-strong);
-  background: transparent;
-  color: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
+.homework-item-row.is-checked {
+  background: rgba(124, 184, 122, 0.25);
+  color: var(--text);
 }
-.homework-toggle:hover {
-  border-color: var(--primary);
-  background: rgba(124, 184, 122, 0.15);
-}
-.homework-toggle.is-checked {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: var(--btn-cream);
+.homework-item-row.is-checked .homework-item-label {
+  color: inherit;
 }
 .homework-item-label {
   flex: 1;
