@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { DAILY_ITEMS, WEEKLY_ITEMS, RAID_ITEMS, getDefaultRaidIdsByLevel, RAID_GOLD_MOCK } from '../data/homeworkChecklist'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { fetchCharacterSiblings } from '../services/lostarkApi'
+import { fetchCharacterArmory, fetchCharacterSiblings } from '../services/lostarkApi'
 import { getClassShortLabel, getClassIconSrc } from '../utils/classIcon'
 
 const REGISTERED_KEY = 'oyo_homework_registered'
@@ -14,8 +15,8 @@ const VIEW_MODE_KEY = 'oyo_homework_view_mode'
 const IconPlus = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 5v14M5 12h14" /></svg>
 )
-const IconArrowLeft = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+const IconMinus = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12h14" /></svg>
 )
 const IconGraph = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -45,8 +46,8 @@ const IconEdit = () => (
 )
 const IconReset = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <polyline points="1 4 1 10 7 10" />
-    <path d="M3.51 15a9 9 0 1 0 .49-5" />
+    <path d="M3 12a9 9 0 1 0 2.64-6.36" />
+    <path d="M3 4v5h5" />
   </svg>
 )
 const IconCheck = () => (
@@ -989,7 +990,7 @@ function makeWeeklyGoldHistory(seed, weeks = 24) {
   return arr
 }
 
-function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterClassName, itemLevelValue, isExpedition = false, onBack, children }) {
+function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterClassName, itemLevelValue, isExpedition = false, onBack, onRemove, children }) {
   const FIXED_WEEKS = 4
   const [activeWeekOffset, setActiveWeekOffset] = useState(0)
   const [activeDayIndex, setActiveDayIndex] = useState(null)
@@ -1044,6 +1045,13 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
     return d
   }, [hoveredDayOffset, now])
   const hoveredDayDone = hoveredDayIdx >= 0 ? dailyDoneSeries[hoveredDayIdx] === 1 : false
+  const weakChoreHints = useMemo(() => {
+    const hints = []
+    if (activeWeekly < 100) hints.push(`주간 숙제 ${100 - activeWeekly}% 남음`)
+    if (activeRaid < 100) hints.push(`레이드 ${100 - activeRaid}% 남음`)
+    if (hints.length === 0) hints.push('이번 주 숙제 거의 완료')
+    return hints
+  }, [activeWeekly, activeRaid])
 
   const buildLineCoords = (values, width, height, fixedMin = null, fixedMax = null) => {
     if (!values || values.length === 0) return []
@@ -1096,7 +1104,7 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
                   {isExpedition ? (
                     <span className="homework-expedition-icon" aria-hidden>원정대</span>
                   ) : (
-                    <ClassIcon className={characterClassName} size={32} />
+                    <ClassIcon className={characterClassName} size={36} />
                   )}
                   <div className="homework-char-name-wrap">
                     <CardTitle className="homework-char-title">{cardLabel}</CardTitle>
@@ -1116,6 +1124,17 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
                   >
                     <IconList />
                   </button>
+                  {onRemove ? (
+                    <button
+                      type="button"
+                      className="homework-btn-icon homework-btn-remove"
+                      onClick={onRemove}
+                      title="삭제"
+                      aria-label="삭제"
+                    >
+                      <IconTrash />
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </CardHeader>
@@ -1131,6 +1150,7 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
                     <div className="homework-card-graph-hover-readout">
                       <span>{formatDate(hoveredDayDate)}</span>
                       <strong>{hoveredDayDone ? '완료' : '미완료'}</strong>
+                      {!hoveredDayDone && <em>일일 숙제 남음</em>}
                     </div>
                     <div className="homework-card-daily-strip">
                       {dailyDoneSeries.map((done, idx) => (
@@ -1151,6 +1171,11 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
                       <div className="homework-card-weekly-gold-head">
                         <span>골드 획득량 (라인)</span>
                         <strong>{activeGold.toLocaleString()} G</strong>
+                      </div>
+                      <div className="homework-card-graph-weekly-hint">
+                        {weakChoreHints.map((hint) => (
+                          <span key={hint}>{hint}</span>
+                        ))}
                       </div>
                       <div className="homework-card-weekly-gold-line-wrap" onMouseEnter={() => setIsGoldChartHover(true)} onMouseLeave={() => setIsGoldChartHover(false)}>
                         <div className="homework-card-weekly-gold-plot">
@@ -1280,7 +1305,7 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
   )
 }
 
-function ExpeditionHomeworkCard({ expId, today, weekKey, onRemove, onComplete, onDismissComplete, isAnimatingComplete, variant = 'detailed', onOpenGraph }) {
+function ExpeditionHomeworkCard({ expId, today, weekKey, onRemove, onComplete, onDismissComplete, isAnimatingComplete, variant = 'detailed', onOpenGraph, expeditionLevelValue = null }) {
   const wrapRef = useRef(null)
   const prevAllCompleteRef = useRef(false)
   const [dailyChecked, setDailyChecked] = useState(() =>
@@ -1357,6 +1382,7 @@ function ExpeditionHomeworkCard({ expId, today, weekKey, onRemove, onComplete, o
                 <span className="homework-expedition-icon" aria-hidden>원정대</span>
                 <div className="homework-char-name-wrap">
                   <span className="homework-char-title">원정대</span>
+                  {expeditionLevelValue != null && <span className="homework-char-level">{`원정대 Lv.${expeditionLevelValue}`}</span>}
                 </div>
               </div>
               <div className="homework-char-compact-buttons" aria-label="원정대 숙제 체크">
@@ -1417,6 +1443,7 @@ function ExpeditionHomeworkCard({ expId, today, weekKey, onRemove, onComplete, o
               <span className="homework-expedition-icon" aria-hidden>원정대</span>
               <div className="homework-char-name-wrap">
                 <CardTitle className="homework-char-title">원정대</CardTitle>
+                {expeditionLevelValue != null && <span className="homework-char-level">{`원정대 Lv.${expeditionLevelValue}`}</span>}
               </div>
             </div>
             <div className="homework-char-header-meta">
@@ -1444,20 +1471,6 @@ function ExpeditionHomeworkCard({ expId, today, weekKey, onRemove, onComplete, o
                 })()}
               </div>
               <div className="homework-char-header-actions">
-                {onOpenGraph && (
-                  <button type="button" className="homework-btn-icon homework-btn-graph" onClick={onOpenGraph} title="그래프 보기" aria-label="그래프 보기">
-                    <IconGraph />
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="homework-btn-icon homework-btn-quick"
-                  onClick={handleResetDailyWeekly}
-                  title="일일·주간 숙제 초기화"
-                  aria-label="일일·주간 숙제 초기화"
-                >
-                  <IconReset />
-                </button>
                 <button
                   type="button"
                   className="homework-btn-icon homework-btn-checkall"
@@ -1467,6 +1480,20 @@ function ExpeditionHomeworkCard({ expId, today, weekKey, onRemove, onComplete, o
                 >
                   <IconCheck />
                 </button>
+                <button
+                  type="button"
+                  className="homework-btn-icon homework-btn-quick"
+                  onClick={handleResetDailyWeekly}
+                  title="일일·주간 숙제 초기화"
+                  aria-label="일일·주간 숙제 초기화"
+                >
+                  <IconReset />
+                </button>
+                {onOpenGraph && (
+                  <button type="button" className="homework-btn-icon homework-btn-graph" onClick={onOpenGraph} title="그래프 보기" aria-label="그래프 보기">
+                    <IconGraph />
+                  </button>
+                )}
                 {onRemove && (
                   <button type="button" className="homework-btn-icon homework-btn-remove" onClick={() => onRemove(expId)} title="삭제" aria-label="삭제">
                     <IconTrash />
@@ -1663,8 +1690,24 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
     [charKey, weekKey]
   )
 
-  const toggleRaid = (id) =>
-    persistRaidChecked(raidChecked.has(id) ? new Set([...raidChecked].filter((x) => x !== id)) : new Set([...raidChecked, id]))
+  const [busFeeAttentionId, setBusFeeAttentionId] = useState(null)
+  const triggerBusFeeAttention = useCallback((raidId) => {
+    setBusFeeAttentionId(raidId)
+    setTimeout(() => setBusFeeAttentionId((prev) => (prev === raidId ? null : prev)), 420)
+  }, [])
+  const toggleRaid = (id) => {
+    const isAlreadyChecked = raidChecked.has(id)
+    const mode = raidModes[id]
+    if (isAlreadyChecked) {
+      persistRaidChecked(new Set([...raidChecked].filter((x) => x !== id)))
+      return
+    }
+    if (mode === 'bus' && !hasValidBusFee(id)) {
+      triggerBusFeeAttention(id)
+      return
+    }
+    persistRaidChecked(new Set([...raidChecked, id]))
+  }
 
   const toggleDaily = (id) =>
     persistDaily(dailyChecked.has(id) ? new Set([...dailyChecked].filter((x) => x !== id)) : new Set([...dailyChecked, id]))
@@ -1699,9 +1742,12 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
     }
   }, [allComplete, character, onComplete, onIncomplete])
 
-  const handleResetDailyWeekly = () => {
+  const handleResetAllHomework = () => {
     persistDaily(new Set())
     persistWeekly(new Set())
+    persistRaidChecked(new Set())
+    setRaidBusFees({})
+    saveRaidBusFees(charKey, weekKey, {})
   }
   const handleCheckAllHomework = () => {
     persistDaily(new Set(DAILY_ITEMS.map((item) => item.id)))
@@ -1776,9 +1822,9 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
             <button
               type="button"
               className="homework-btn-icon homework-btn-quick"
-              onClick={handleResetDailyWeekly}
-              title="일일·주간 숙제 초기화"
-              aria-label="일일·주간 숙제 초기화"
+              onClick={handleResetAllHomework}
+              title="전체 숙제 초기화"
+              aria-label="전체 숙제 초기화"
             >
               <IconReset />
             </button>
@@ -1841,6 +1887,24 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
             })()}
           </div>
           <div className="homework-char-header-actions">
+            <button
+              type="button"
+              className="homework-btn-icon homework-btn-checkall"
+              onClick={handleCheckAllHomework}
+              title="모든 숙제 전체 체크"
+              aria-label="모든 숙제 전체 체크"
+            >
+              <IconCheck />
+            </button>
+            <button
+              type="button"
+              className="homework-btn-icon homework-btn-quick"
+              onClick={handleResetAllHomework}
+              title="전체 숙제 초기화"
+              aria-label="전체 숙제 초기화"
+            >
+              <IconReset />
+            </button>
             {onOpenGraph && (
               <button
                 type="button"
@@ -1852,24 +1916,6 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
                 <IconGraph />
               </button>
             )}
-            <button
-              type="button"
-              className="homework-btn-icon homework-btn-quick"
-              onClick={handleResetDailyWeekly}
-              title="일일·주간 숙제 초기화"
-              aria-label="일일·주간 숙제 초기화"
-            >
-              <IconReset />
-            </button>
-            <button
-              type="button"
-              className="homework-btn-icon homework-btn-checkall"
-              onClick={handleCheckAllHomework}
-              title="모든 숙제 전체 체크"
-              aria-label="모든 숙제 전체 체크"
-            >
-              <IconCheck />
-            </button>
             {onRemove && (
               <button type="button" className="homework-btn-icon homework-btn-remove" onClick={() => onRemove(character)} title="삭제" aria-label="삭제">
                 <IconTrash />
@@ -1937,9 +1983,9 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
               </button>
             </div>
           </div>
-          <ul className="homework-list homework-raid-list">
+          <div className="homework-list homework-raid-list" role="list">
             {raidSlots.length === 0 ? (
-              <li className="homework-raid-empty">편집에서 표시할 레이드를 선택하세요.</li>
+              <div className="homework-raid-empty">편집에서 표시할 레이드를 선택하세요.</div>
             ) : (
               raidSlots
                 .map((id) => RAID_ITEMS.find((r) => r.id === id))
@@ -1951,34 +1997,93 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
                   const busRole = raidBusRoles[item.id] ?? 'driver'
                   const isChecked = raidChecked.has(item.id) || (mode === 'bus' && hasValidBusFee(item.id))
                   return (
-                    <li
-                      key={item.id}
-                      role="button"
-                      tabIndex={0}
-                      className={`homework-raid-row homework-raid-row-display ${isChecked ? 'is-checked' : ''}`}
-                      onClick={() => toggleRaid(item.id)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRaid(item.id); } }}
-                      aria-pressed={isChecked}
-                    >
-                      <div className="homework-raid-row-main">
-                        <span className="homework-item-label">{item.label}</span>
-                        {mode && <span className={`homework-raid-badge homework-raid-badge-${mode}`}>{mode === 'single' ? '싱글' : '버스'}</span>}
-                      </div>
-                      {mock && (mock.gold > 0 || mock.boundGold > 0) && (
-                        <div className="homework-raid-gold">
-                          {mock.gold > 0 && <span className="homework-raid-gold-item homework-gold">골드 {mock.gold.toLocaleString()}</span>}
-                          {mock.gold > 0 && mock.boundGold > 0 && <span className="homework-raid-gold-sep">/</span>}
-                          {mock.boundGold > 0 && <span className="homework-raid-gold-item homework-bound-gold">귀속 {mock.boundGold.toLocaleString()}</span>}
+                    <div key={item.id} className={`homework-raid-card ${isChecked ? 'is-checked' : ''}`} role="listitem">
+                      <button
+                        type="button"
+                        className={`homework-raid-row homework-raid-row-display ${isChecked ? 'is-checked' : ''}`}
+                        onClick={() => toggleRaid(item.id)}
+                        aria-pressed={isChecked}
+                      >
+                        <div className="homework-raid-chip-head">
+                        <div className="homework-raid-row-main">
+                          <span className="homework-item-label">{item.label}</span>
+                          {mode && <span className={`homework-raid-badge homework-raid-badge-${mode}`}>{mode === 'single' ? '싱글' : '버스'}</span>}
                         </div>
-                      )}
+                        {mock && (mock.gold > 0 || mock.boundGold > 0) && (
+                          <div className="homework-raid-gold">
+                            {mock.gold > 0 && (
+                              <span className="homework-raid-gold-item homework-gold">
+                                <span className="homework-gold-label">골드 </span>
+                                <span className="homework-gold-value">{mock.gold.toLocaleString()}</span>
+                              </span>
+                            )}
+                            {mock.gold > 0 && mock.boundGold > 0 && <span className="homework-raid-gold-sep">/</span>}
+                            {mock.boundGold > 0 && (
+                              <span className="homework-raid-gold-item homework-bound-gold">
+                                <span className="homework-bound-gold-label">귀속 </span>
+                                <span className="homework-bound-gold-value">{mock.boundGold.toLocaleString()}</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        </div>
+                      </button>
                       {mode === 'bus' && (
-                        <div className="homework-raid-busfee-wrap" onClick={(e) => e.stopPropagation()}>
-                          <div className="homework-raid-busrole">
-                            <span className="homework-raid-busrole-label">역할</span>
-                            <div className="homework-raid-busrole-btns">
+                        <div
+                          className={`homework-raid-busfee-wrap ${busFeeAttentionId === item.id ? 'is-attention' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (!hasValidBusFee(item.id)) {
+                              triggerBusFeeAttention(item.id)
+                            }
+                            const input = e.currentTarget.querySelector('.homework-raid-busfee-input')
+                            if (input instanceof HTMLInputElement) input.focus()
+                          }}
+                        >
+                          <div className="homework-raid-busrow-inline">
+                          <div className="homework-raid-busfee">
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              className={`homework-raid-busfee-input ${busFeeAttentionId === item.id ? 'is-attention' : ''}`}
+                              value={busFee != null ? busFee : ''}
+                              onChange={(e) => {
+                                const raw = e.target.value
+                                const v = raw.replace(/[^\d]/g, '')
+                                setRaidBusFee(item.id, v === '' ? '' : v)
+                              }}
+                              onBlur={(e) => {
+                                const raw = e.target.value.replace(/[^\d]/g, '')
+                                const n = raw === '' ? null : Number(raw)
+                                const isValid = n != null && Number.isFinite(n) && n >= 0
+                                if (isValid) {
+                                  persistRaidChecked(new Set([...raidChecked, item.id]))
+                                  setBusFeeAttentionId((prev) => (prev === item.id ? null : prev))
+                                } else {
+                                  persistRaidChecked(new Set([...raidChecked].filter((x) => x !== item.id)))
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key !== 'Enter') return
+                                const raw = e.currentTarget.value.replace(/[^\d]/g, '')
+                                const n = raw === '' ? null : Number(raw)
+                                const isValid = n != null && Number.isFinite(n) && n >= 0
+                                if (isValid) {
+                                  persistRaidChecked(new Set([...raidChecked, item.id]))
+                                  setBusFeeAttentionId((prev) => (prev === item.id ? null : prev))
+                                } else {
+                                  triggerBusFeeAttention(item.id)
+                                }
+                              }}
+                              placeholder="버스비 입력"
+                            />
+                            <span className="homework-raid-busfee-unit">G</span>
+                          </div>
+                            <div className={`homework-raid-busrole-switch ${busRole === 'passenger' ? 'is-passenger' : 'is-driver'}`}>
+                              <span className="homework-raid-busrole-thumb" aria-hidden />
                               <button
                                 type="button"
-                                className={`homework-raid-busrole-btn ${busRole === 'driver' ? 'is-active' : ''}`}
+                                className="homework-raid-busrole-opt"
                                 onClick={(e) => { e.stopPropagation(); setRaidBusRole(item.id, 'driver') }}
                                 aria-pressed={busRole === 'driver'}
                                 aria-label="기사"
@@ -1987,7 +2092,7 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
                               </button>
                               <button
                                 type="button"
-                                className={`homework-raid-busrole-btn ${busRole === 'passenger' ? 'is-active' : ''}`}
+                                className="homework-raid-busrole-opt"
                                 onClick={(e) => { e.stopPropagation(); setRaidBusRole(item.id, 'passenger') }}
                                 aria-pressed={busRole === 'passenger'}
                                 aria-label="승객"
@@ -1996,43 +2101,21 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
                               </button>
                             </div>
                           </div>
-                          <div className="homework-raid-busfee">
-                            <label className="homework-raid-busfee-label">버스비</label>
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              className="homework-raid-busfee-input"
-                              placeholder="0"
-                              value={busFee != null ? busFee : ''}
-                              onChange={(e) => {
-                                const raw = e.target.value
-                                const v = raw.replace(/[^\d]/g, '')
-                                setRaidBusFee(item.id, v === '' ? '' : v)
-                                const n = v === '' ? null : Number(v)
-                                if (n != null && Number.isFinite(n) && n >= 0) {
-                                  persistRaidChecked(new Set([...raidChecked, item.id]))
-                                } else {
-                                  persistRaidChecked(new Set([...raidChecked].filter((x) => x !== item.id)))
-                                }
-                              }}
-                            />
-                            <span className="homework-raid-busfee-unit">G</span>
-                          </div>
                           <div className="homework-raid-total-gold">
                             총 획득골드 <strong>{(() => {
                               const base = (mock?.gold ?? 0) + (mock?.boundGold ?? 0)
                               const fee = (busFee != null && Number.isFinite(Number(busFee)) ? Number(busFee) : 0)
                               const sign = busRole === 'driver' ? 1 : -1
                               return (base + sign * fee).toLocaleString()
-                            })()}</strong> G
+                            })()}</strong> <span className="homework-g-unit">G</span>
                           </div>
                         </div>
                       )}
-                    </li>
+                    </div>
                   )
                 })
             )}
-          </ul>
+          </div>
         </div>
       </CardContent>
       )}
@@ -2051,7 +2134,7 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
       )}
     </Card>
     </div>
-    {raidModalOpen && (
+    {raidModalOpen && typeof document !== 'undefined' && createPortal(
       <RaidSelectModal
         characterName={name}
         selectedIds={raidSlots}
@@ -2064,13 +2147,14 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
           setRaidModalOpen(false)
         }}
         onClose={() => setRaidModalOpen(false)}
-      />
+      />,
+      document.body
     )}
     </>
   )
 }
 
-export function HomeworkPanel({ onNavigateLogin }) {
+export function HomeworkPanel() {
   const today = getTodayDateString()
   const weekKey = getWeekKey()
 
@@ -2093,11 +2177,10 @@ export function HomeworkPanel({ onNavigateLogin }) {
   const [cardGraphFlippedKeys, setCardGraphFlippedKeys] = useState(() => new Set())
   const [graphBlockedShakeKey, setGraphBlockedShakeKey] = useState(0)
   const [useCustomOrder, setUseCustomOrder] = useState(() => loadUseCustomOrder())
-  const [loginShakeKey, setLoginShakeKey] = useState(0)
+  const [loginShakeTarget, setLoginShakeTarget] = useState('')
   const isCompactView = viewMode === 'compact'
 
   const hasRegistered = registered.length > 0
-  const showForm = showRegisterForm || !hasRegistered
   const hasExpeditionCard = expeditionCards.length > 0
 
   /** 카드 표시 순서: 수동 저장 시에만 사용. 없으면 레벨순+완료 맨 끝 */
@@ -2133,22 +2216,39 @@ export function HomeworkPanel({ onNavigateLogin }) {
   const addRegistered = useCallback((character) => {
     if (!character?.CharacterName || !character?.ServerName) return
     const key = getCharKey(character)
-    setRegistered((prev) => {
-      if (prev.some((c) => getCharKey(c) === key)) return prev
-      const next = [...prev, { ...character }]
-      saveRegistered(next)
-      return next
-    })
-    setCardOrder((prev) => {
-      if (prev.includes(key)) return prev
-      const next = [...prev, key]
-      saveCardOrder(next)
-      return next
-    })
+    const ensureExpeditionLevel = async (src) => {
+      const existing = Number(String(src?.ExpeditionLevel ?? '').replace(/[^\d.]/g, ''))
+      if (Number.isFinite(existing) && existing > 0) return src
+      try {
+        const armory = await fetchCharacterArmory(src.CharacterName)
+        const rawLevel = armory?.ArmoryProfile?.ExpeditionLevel ?? armory?.ExpeditionLevel
+        const nextLevel = Number(String(rawLevel ?? '').replace(/[^\d.]/g, ''))
+        if (!Number.isFinite(nextLevel) || nextLevel <= 0) return src
+        return { ...src, ExpeditionLevel: nextLevel }
+      } catch {
+        return src
+      }
+    }
+    ;(async () => {
+      const enriched = await ensureExpeditionLevel(character)
+      setRegistered((prev) => {
+        if (prev.some((c) => getCharKey(c) === key)) return prev
+        const next = [...prev, { ...enriched }]
+        saveRegistered(next)
+        return next
+      })
+      setCardOrder((prev) => {
+        if (prev.includes(key)) return prev
+        const next = [...prev, key]
+        saveCardOrder(next)
+        return next
+      })
+    })()
   }, [])
 
   const gridRef = useRef(null)
   const completeTimeoutsRef = useRef({})
+  const searchRequestIdRef = useRef(0)
 
   const MOVE_DELAY_MS = 1000
 
@@ -2246,11 +2346,12 @@ export function HomeworkPanel({ onNavigateLogin }) {
     })
   }, [])
 
-  const handleLoginRequiredClick = useCallback(() => {
-    setLoginShakeKey((k) => k + 1)
-    setTimeout(() => setLoginShakeKey(0), 220)
-    onNavigateLogin?.()
-  }, [onNavigateLogin])
+  const handleLoginRequiredClick = useCallback((target) => {
+    setLoginShakeTarget(target)
+    setTimeout(() => {
+      setLoginShakeTarget((prev) => (prev === target ? '' : prev))
+    }, 220)
+  }, [])
 
   const removeExpeditionCard = useCallback((expId) => {
     setExpeditionCards((prev) => {
@@ -2266,6 +2367,8 @@ export function HomeworkPanel({ onNavigateLogin }) {
   }, [])
 
   const handleSearch = async () => {
+    const requestId = searchRequestIdRef.current + 1
+    searchRequestIdRef.current = requestId
     const name = String(registerInput || '').trim()
     if (!name) return
     setRegisterError('')
@@ -2276,6 +2379,27 @@ export function HomeworkPanel({ onNavigateLogin }) {
       const list = Array.isArray(data) ? data : []
       setSearchResults(list)
       if (list.length === 0) setRegisterError('검색 결과가 없습니다.')
+      if (list.length > 0) {
+        const enriched = await Promise.all(
+          list.slice(0, 10).map(async (char) => {
+            const raw = Number(String(char?.ExpeditionLevel ?? '').replace(/[^\d.]/g, ''))
+            if (Number.isFinite(raw) && raw > 0) return char
+            try {
+              const armory = await fetchCharacterArmory(char.CharacterName)
+              const fromArmory = armory?.ArmoryProfile?.ExpeditionLevel ?? armory?.ExpeditionLevel
+              const parsed = Number(String(fromArmory ?? '').replace(/[^\d.]/g, ''))
+              if (!Number.isFinite(parsed) || parsed <= 0) return char
+              return { ...char, ExpeditionLevel: parsed }
+            } catch {
+              return char
+            }
+          })
+        )
+        if (searchRequestIdRef.current === requestId) {
+          const byKey = new Map(enriched.map((c) => [getCharKey(c), c]))
+          setSearchResults((prev) => prev.map((c) => byKey.get(getCharKey(c)) ?? c))
+        }
+      }
     } catch (e) {
       setRegisterError(e instanceof Error ? e.message : '검색에 실패했습니다.')
       setSearchResults([])
@@ -2284,7 +2408,62 @@ export function HomeworkPanel({ onNavigateLogin }) {
     }
   }
 
+  const toggleRemoteRegisterForm = useCallback(() => {
+    setShowRegisterForm((prev) => {
+      const next = !prev
+      if (!next) {
+        setRegisterInput('')
+        setSearchResults([])
+        setRegisterError('')
+        setRegisterLoading(false)
+      }
+      return next
+    })
+  }, [])
+
   const keysRegistered = useMemo(() => new Set(registered.map(getCharKey)), [registered])
+  const expeditionLevelFetchAttemptedRef = useRef(new Set())
+
+  useEffect(() => {
+    const target = registered.find((c) => {
+      const key = getCharKey(c)
+      if (expeditionLevelFetchAttemptedRef.current.has(key)) return false
+      return Number.isNaN(Number(c?.ExpeditionLevel))
+    })
+    if (!target?.CharacterName) return
+
+    const key = getCharKey(target)
+    expeditionLevelFetchAttemptedRef.current.add(key)
+    let cancelled = false
+
+    ;(async () => {
+      try {
+        const armory = await fetchCharacterArmory(target.CharacterName)
+        const rawLevel = armory?.ArmoryProfile?.ExpeditionLevel ?? armory?.ExpeditionLevel
+        const nextLevel = Number(String(rawLevel ?? '').replace(/[^\d.]/g, ''))
+        if (!Number.isFinite(nextLevel) || cancelled) return
+
+        setRegistered((prev) => {
+          let changed = false
+          const next = prev.map((c) => {
+            if (getCharKey(c) !== key) return c
+            const current = Number(String(c?.ExpeditionLevel ?? '').replace(/[^\d.]/g, ''))
+            if (Number.isFinite(current)) return c
+            changed = true
+            return { ...c, ExpeditionLevel: nextLevel }
+          })
+          if (changed) saveRegistered(next)
+          return changed ? next : prev
+        })
+      } catch {
+        // optional enrichment only
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [registered])
 
   const [columnCount, setColumnCount] = useState(() => {
     if (typeof window === 'undefined') return 2
@@ -2305,6 +2484,7 @@ export function HomeworkPanel({ onNavigateLogin }) {
   const MASONRY_GAP_WIDE = 14
   const gapPx = columnCount >= 3 ? MASONRY_GAP_WIDE : MASONRY_GAP
   const APP_CONTENT_MAX_PX = 1000
+  const DETAILED_CARD_MIN_WIDTH_PX = 256
 
   /** 레벨 높은 순, 완료한 캐릭터는 맨 끝 */
   const autoOrder = useMemo(() => {
@@ -2365,8 +2545,12 @@ export function HomeworkPanel({ onNavigateLogin }) {
       ? Math.min(window.innerWidth - 48, APP_CONTENT_MAX_PX)
       : APP_CONTENT_MAX_PX
     const gridWidth = rawWidth > 0 ? Math.min(rawWidth, cap) : 0
-    // 카드 개수보다 컬럼을 크게 잡지 않아 리모컨 앞 빈 칸 방지
-    const cols = Math.max(1, Math.min(columnCount, Math.max(1, displayOrder.length)))
+    // 카드 최소 너비를 보장해 버튼/텍스트 잘림 방지
+    const colsByMinWidth = gridWidth > 0
+      ? Math.max(1, Math.floor((gridWidth + gapPx) / (DETAILED_CARD_MIN_WIDTH_PX + gapPx)))
+      : 1
+    // 카드 개수/브레이크포인트/최소너비 기준을 함께 적용
+    const cols = Math.max(1, Math.min(columnCount, colsByMinWidth, Math.max(1, displayOrder.length)))
     const cardWidthPx = gridWidth > 0 ? (gridWidth - (cols - 1) * gapPx) / cols : 0
     grid.style.setProperty('--masonry-card-width-px', `${Math.max(0, cardWidthPx)}px`)
 
@@ -2483,66 +2667,24 @@ export function HomeworkPanel({ onNavigateLogin }) {
     return byKey
   }, [displayOrder, getCharKey])
 
+  const expeditionLevelValue = useMemo(() => {
+    const levels = registered
+      .map((c) => Number(String(c?.ExpeditionLevel ?? '').replace(/[^\d.]/g, '')))
+      .filter((v) => Number.isFinite(v) && v > 0)
+    if (levels.length === 0) return null
+    return Math.max(...levels)
+  }, [registered])
+
   return (
     <section className={`view-panel homework-panel homework-panel-${viewMode}`}>
       <div className="homework-layout">
         <div className="homework-main">
-          {showForm && (
-            <Card className="homework-register-card">
-              <CardHeader className="homework-register-header">
-                <CardTitle className="homework-register-title">캐릭터 등록</CardTitle>
-                <CardDescription>캐릭터 이름으로 검색한 뒤 등록하면 숙제를 체크할 수 있습니다.</CardDescription>
-                {hasRegistered && (
-                  <button type="button" className="homework-btn-icon homework-register-back" onClick={() => setShowRegisterForm(false)} title="목록으로" aria-label="목록으로">
-                    <IconArrowLeft />
-                  </button>
-                )}
-              </CardHeader>
-              <CardContent className="homework-register-content">
-                <div className="homework-register-row">
-                  <Input
-                    placeholder="캐릭터 이름"
-                    value={registerInput}
-                    onChange={(e) => setRegisterInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    className="homework-register-input"
-                  />
-                  <Button onClick={handleSearch} disabled={registerLoading}>
-                    {registerLoading ? '검색 중…' : '검색'}
-                  </Button>
-                </div>
-                {registerError && <p className="homework-register-error">{registerError}</p>}
-                {searchResults.length > 0 && (
-                  <ul className="homework-search-results homework-search-results-compact">
-                    {searchResults.map((char) => {
-                      const key = getCharKey(char)
-                      const isAdded = keysRegistered.has(key)
-                      const level = formatItemLevel(char?.ItemAvgLevel ?? char?.ItemMaxLevel)
-                      return (
-                        <li key={key} className="homework-search-item-compact">
-                          <ClassIcon className={char?.CharacterClassName} size={24} />
-                          <span className="homework-search-nick">{char.CharacterName}</span>
-                          <span className="homework-search-level">{level != null ? level : '-'}</span>
-                          <button type="button" className={`homework-btn-icon homework-btn-add ${isAdded ? 'is-added' : ''}`} onClick={() => (isAdded ? removeRegistered(char) : addRegistered(char))} title={isAdded ? '등록 해제' : '등록'} aria-label={isAdded ? '등록 해제' : '등록'}>
-                            {isAdded ? <IconCheck /> : <IconPlus />}
-                          </button>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                )}
+          {!hasAnyCards ? (
+            <Card className="homework-empty-card">
+              <CardContent>
+                <p className="homework-empty-text">등록된 캐릭터가 없습니다. 리모콘에서 캐릭터를 검색해 등록하거나, 원정대 숙제 카드를 추가해 주세요.</p>
               </CardContent>
             </Card>
-          )}
-
-          {!hasAnyCards ? (
-            showForm ? null : (
-              <Card className="homework-empty-card">
-                <CardContent>
-                  <p className="homework-empty-text">등록된 캐릭터가 없습니다. 위에서 캐릭터를 검색해 등록하거나, 원정대 숙제 카드를 추가해 주세요.</p>
-                </CardContent>
-              </Card>
-            )
           ) : isCompactView ? (
             <div className="homework-by-server">
               <div className="homework-char-list-flow">
@@ -2559,6 +2701,7 @@ export function HomeworkPanel({ onNavigateLogin }) {
                         onDismissComplete={handleExpeditionDismissComplete}
                         isAnimatingComplete={animatingCompleteKeys.has('exp')}
                         variant="compact"
+                        expeditionLevelValue={expeditionLevelValue}
                       />
                     )
                   }
@@ -2598,8 +2741,9 @@ export function HomeworkPanel({ onNavigateLogin }) {
                         chartData={chartDataForCard}
                         cardLabel={cardLabelForCard}
                         isExpedition
-                        itemLevelValue={null}
+                        itemLevelValue={expeditionLevelValue != null ? `원정대 Lv.${expeditionLevelValue}` : null}
                         onBack={() => closeCardGraph('exp')}
+                        onRemove={() => removeExpeditionCard(item.id)}
                       >
                         <ExpeditionHomeworkCard
                           expId={item.id}
@@ -2610,6 +2754,7 @@ export function HomeworkPanel({ onNavigateLogin }) {
                           onDismissComplete={handleExpeditionDismissComplete}
                           isAnimatingComplete={animatingCompleteKeys.has('exp')}
                           onOpenGraph={() => openCardGraph('exp')}
+                        expeditionLevelValue={expeditionLevelValue}
                         />
                       </HomeworkCardFlipWrapper>
                     )
@@ -2624,6 +2769,7 @@ export function HomeworkPanel({ onNavigateLogin }) {
                       characterClassName={item.character?.CharacterClassName ?? null}
                       itemLevelValue={formatItemLevel(item.character?.ItemAvgLevel ?? item.character?.ItemMaxLevel)}
                       onBack={() => closeCardGraph(charKey)}
+                      onRemove={() => removeRegistered(item.character)}
                     >
                       <CharacterHomeworkCard
                         character={item.character}
@@ -2651,20 +2797,90 @@ export function HomeworkPanel({ onNavigateLogin }) {
               <CardDescription className="homework-remote-desc">캐릭터·원정대 카드와 보기 방식을 설정합니다.</CardDescription>
             </CardHeader>
             <CardContent className="homework-remote-actions">
-              <button type="button" className="homework-toolbar-btn homework-toolbar-btn-register" onClick={() => setShowRegisterForm(true)} title="캐릭터 등록">
-                <IconPlus />
-                <span>캐릭터 등록</span>
+              <button
+                type="button"
+                className={`homework-toolbar-btn homework-toolbar-btn-expedition ${hasExpeditionCard ? 'is-remove' : ''}`}
+                onClick={() => {
+                  if (hasExpeditionCard) {
+                    removeExpeditionCard(EXPEDITION_SINGLE_ID)
+                    return
+                  }
+                  addExpeditionCard()
+                }}
+                title={hasExpeditionCard ? '원정대 숙제 카드 제거' : '원정대 숙제 카드 추가'}
+                aria-label={hasExpeditionCard ? '원정대 숙제 제거' : '원정대 숙제 추가'}
+              >
+                {hasExpeditionCard ? <IconMinus /> : <IconPlus />}
+                <span>원정대</span>
               </button>
-              <button type="button" className="homework-toolbar-btn homework-toolbar-btn-expedition" onClick={addExpeditionCard} title="원정대 숙제 카드 추가" aria-label="원정대 숙제 추가" disabled={hasExpeditionCard}>
-                <IconPlus />
-                <span>원정대 숙제</span>
-              </button>
-              <button type="button" className="homework-toolbar-btn homework-toolbar-btn-order" onClick={() => setOrderModalOpen(true)} title="카드 순서 편집" disabled={gridItems.length < 2}>
-                순서 편집
+              <div className="homework-remote-register-toggle">
+                <button
+                  type="button"
+                  className={`homework-toolbar-btn homework-toolbar-btn-register homework-toolbar-btn-register-trigger ${showRegisterForm ? 'is-open' : ''}`}
+                  onClick={toggleRemoteRegisterForm}
+                  title="캐릭터 등록"
+                >
+                  {showRegisterForm ? <IconMinus /> : <IconPlus />}
+                  {!showRegisterForm && <span>캐릭터</span>}
+                </button>
+                <div className={`homework-remote-register ${showRegisterForm ? 'is-open' : ''}`}>
+                  {showRegisterForm && (
+                    <>
+                    <div className="homework-remote-register-row">
+                      <Input
+                        placeholder="닉네임 검색"
+                        value={registerInput}
+                        onChange={(e) => setRegisterInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                        className="homework-remote-register-input"
+                      />
+                      <button type="button" className="homework-toolbar-btn homework-toolbar-btn-remote-search" onClick={handleSearch} disabled={registerLoading}>
+                        {registerLoading ? '검색 중…' : '검색'}
+                      </button>
+                    </div>
+                    {registerError && <p className="homework-register-error">{registerError}</p>}
+                    {searchResults.length > 0 && (
+                      <ul className="homework-remote-search-results">
+                        {searchResults.map((char, idx) => {
+                          const key = getCharKey(char)
+                          const isAdded = keysRegistered.has(key)
+                          const level = formatItemLevel(char?.ItemAvgLevel ?? char?.ItemMaxLevel)
+                          return (
+                          <li
+                            key={key}
+                            className={`homework-remote-search-item ${isAdded ? 'is-added' : ''}`}
+                            style={{ '--result-index': idx }}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => (isAdded ? removeRegistered(char) : addRegistered(char))}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                isAdded ? removeRegistered(char) : addRegistered(char)
+                              }
+                            }}
+                            aria-pressed={isAdded}
+                          >
+                            <ClassIcon className={char?.CharacterClassName} size={18} />
+                              <span className="homework-remote-search-name">{char.CharacterName}</span>
+                              <span className="homework-remote-search-level">{level != null ? level : '-'}</span>
+                              {isAdded && <span className="homework-remote-search-added-mark" aria-hidden><IconCheck /></span>}
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    )}
+                    </>
+                  )}
+                </div>
+              </div>
+              <button type="button" className="homework-toolbar-btn homework-toolbar-btn-order" onClick={() => setOrderModalOpen(true)} title="카드 순서 편집" aria-label="카드 순서 편집" disabled={gridItems.length < 2}>
+                <IconEdit />
+                <span>순서</span>
               </button>
               <button
                 type="button"
-                className={`homework-toolbar-btn homework-toolbar-btn-extra ${graphBlockedShakeKey ? 'homework-toolbar-btn-inactive-feedback is-shake' : ''}`}
+                className={`homework-toolbar-btn homework-toolbar-btn-extra homework-toolbar-btn-graph-remote ${graphBlockedShakeKey ? 'homework-toolbar-btn-inactive-feedback is-shake' : ''}`}
                 onClick={() => {
                   if (isCompactView) {
                     setGraphBlockedShakeKey((k) => k + 1)
@@ -2679,27 +2895,28 @@ export function HomeworkPanel({ onNavigateLogin }) {
                 title={allCardsFlipped ? '목록 보기' : '숙제 현황 그래프'}
               >
                 {allCardsFlipped ? <IconList /> : <IconGraph />}
+                <span>{allCardsFlipped ? '목록' : '그래프'}</span>
               </button>
               <button
                 type="button"
-                className={`homework-toolbar-btn homework-toolbar-btn-extra homework-toolbar-btn-login-required ${loginShakeKey ? 'is-shake' : ''}`}
-                onClick={handleLoginRequiredClick}
+                className={`homework-toolbar-btn homework-toolbar-btn-extra homework-toolbar-btn-login-required ${loginShakeTarget === 'friend' ? 'is-shake' : ''}`}
+                onClick={() => handleLoginRequiredClick('friend')}
                 title="깐부"
               >
                 깐부
               </button>
               <button
                 type="button"
-                className={`homework-toolbar-btn homework-toolbar-btn-extra homework-toolbar-btn-login-required ${loginShakeKey ? 'is-shake' : ''}`}
-                onClick={handleLoginRequiredClick}
+                className={`homework-toolbar-btn homework-toolbar-btn-extra homework-toolbar-btn-login-required ${loginShakeTarget === 'party' ? 'is-shake' : ''}`}
+                onClick={() => handleLoginRequiredClick('party')}
                 title="파티"
               >
                 파티
               </button>
               <button
                 type="button"
-                className={`homework-toolbar-btn homework-toolbar-btn-extra homework-toolbar-btn-login-required ${loginShakeKey ? 'is-shake' : ''}`}
-                onClick={handleLoginRequiredClick}
+                className={`homework-toolbar-btn homework-toolbar-btn-extra homework-toolbar-btn-login-required ${loginShakeTarget === 'raid' ? 'is-shake' : ''}`}
+                onClick={() => handleLoginRequiredClick('raid')}
                 title="공대"
               >
                 공대

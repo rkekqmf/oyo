@@ -212,7 +212,7 @@ function App() {
           </section>
         </TabsContent>
 
-        <TabsContent value="homework">
+        <TabsContent value="homework" className="ui-tabs-content-homework">
           <HomeworkPanel onNavigateLogin={() => setActiveView('login')} />
         </TabsContent>
 

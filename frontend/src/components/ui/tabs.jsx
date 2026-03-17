@@ -20,9 +20,9 @@ export function TabsTrigger({ children, value }) {
   )
 }
 
-export function TabsContent({ children, value }) {
+export function TabsContent({ children, value, className = '' }) {
   return (
-    <TabsPrimitive.Content value={value} className="ui-tabs-content">
+    <TabsPrimitive.Content value={value} className={`ui-tabs-content ${className}`.trim()}>
       {children}
     </TabsPrimitive.Content>
   )
