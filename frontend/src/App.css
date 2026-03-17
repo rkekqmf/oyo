@@ -3305,7 +3305,7 @@ body {
   padding-bottom: 14px;
 }
 .homework-char-section.homework-raid-section {
-  padding-bottom: 20px !important;
+  padding-bottom: 24px !important;
   overflow: visible;
 }
 .homework-raid-actions {
@@ -3324,14 +3324,8 @@ body {
 .homework-raid-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 0 0 14px !important;
-}
-.homework-raid-card {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 100%;
+  gap: 6px;
+  padding: 0 0 20px !important;
 }
 .homework-raid-row {
   display: flex;
@@ -3340,12 +3334,12 @@ body {
   gap: 8px;
   margin: 0;
   padding: 0;
-  border-bottom: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 96%, transparent);
   list-style: none;
 }
 .homework-raid-row:last-child {
-  border-bottom: none;
-  margin-bottom: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 96%, transparent);
+  margin-bottom: 0;
 }
 .homework-char-grid-masonry .homework-char-card-wrap,
 .homework-char-grid-masonry .homework-card-flip-wrap .homework-char-card-wrap,
@@ -3371,8 +3365,8 @@ body {
   max-height: 0;
   opacity: 0;
   overflow: hidden;
-  transform: translateY(-8px);
-  transition: max-height 0.48s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease, padding 0.32s ease, transform 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(-10px);
+  transition: max-height 0.56s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.34s ease, padding 0.34s ease, transform 0.52s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .homework-remote-register.is-open {
   max-height: 1600px;
@@ -3458,14 +3452,16 @@ body {
   color: var(--muted);
   flex-shrink: 0;
 }
+.homework-remote-search-exp-level {
+  font-size: 10px;
+  color: color-mix(in srgb, var(--point) 70%, var(--text));
+  flex-shrink: 0;
+}
 .homework-raid-row .homework-item-label {
   flex: 1;
   min-width: 0;
 }
 .homework-raid-row-display {
-  appearance: none;
-  width: 100%;
-  text-align: left;
   flex-direction: column;
   align-items: stretch;
   gap: 4px;
@@ -3504,6 +3500,17 @@ body {
   font-size: 10px;
   color: color-mix(in srgb, var(--danger) 68%, var(--text));
   font-style: normal;
+}
+.homework-card-graph-task-readout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px;
+  border: 1px solid color-mix(in srgb, var(--border) 95%, transparent);
+  border-radius: 6px;
+  padding: 5px 8px;
+  background: color-mix(in srgb, var(--bg-mid) 84%, transparent);
+  font-size: 10px;
+  color: var(--text-soft);
 }
 @keyframes homework-remote-results-reveal {
   from {
@@ -4201,6 +4208,10 @@ body {
 .homework-card-daily-cell.is-done {
   background: rgba(124, 184, 122, 0.88);
   border-color: rgba(124, 184, 122, 0.65);
+}
+.homework-card-daily-cell.is-half {
+  background: linear-gradient(90deg, rgba(124, 184, 122, 0.86) 50%, rgba(234, 234, 222, 0.12) 50%);
+  border-color: color-mix(in srgb, var(--homework-daily-color) 45%, var(--border));
 }
 .homework-card-daily-cell.is-miss {
   background: rgba(234, 234, 222, 0.12);

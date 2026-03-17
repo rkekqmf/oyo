@@ -962,6 +962,23 @@ function makeDailyDoneHistory(seed, days = 168) {
   return arr
 }
 
+function makeDailyTaskHistory(seed, items, days = 168) {
+  const history = []
+  for (let dayIdx = 0; dayIdx < days; dayIdx += 1) {
+    const done = []
+    const miss = []
+    items.forEach((item, itemIdx) => {
+      const v = ((seed >> ((dayIdx + itemIdx) % 16)) + dayIdx * 19 + itemIdx * 31 + seed) % 100
+      const isDone = v < 70
+      if (isDone) done.push(item.label)
+      else miss.push(item.label)
+    })
+    const ratio = items.length > 0 ? done.length / items.length : 0
+    history.push({ done, miss, ratio })
+  }
+  return history
+}
+
 function makeWeeklyRateHistory(seed, weeks = 24, min = 45, max = 100) {
   const span = Math.max(1, max - min)
   const arr = []
@@ -974,6 +991,23 @@ function makeWeeklyRateHistory(seed, weeks = 24, min = 45, max = 100) {
     }
   }
   return arr
+}
+
+function makeWeeklyTaskHistory(seed, items, weeks = 24) {
+  const history = []
+  for (let weekIdx = 0; weekIdx < weeks; weekIdx += 1) {
+    const done = []
+    const miss = []
+    items.forEach((item, itemIdx) => {
+      const v = ((seed >> ((weekIdx + itemIdx) % 12)) + weekIdx * 17 + itemIdx * 29 + seed) % 100
+      const isDone = v < 68
+      if (isDone) done.push(item.label)
+      else miss.push(item.label)
+    })
+    const ratio = items.length > 0 ? done.length / items.length : 0
+    history.push({ done, miss, ratio })
+  }
+  return history
 }
 
 function makeWeeklyGoldHistory(seed, weeks = 24) {
@@ -1018,9 +1052,12 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
   const days = weeks * 7
 
   const dailyDoneSeries = chartData?.dailyDoneHistory?.slice(-days) ?? []
+  const dailyTaskSeries = chartData?.dailyTaskHistory?.slice(-days) ?? []
   const weeklyGoldSeries = chartData?.weeklyGoldHistory?.slice(-weeks) ?? []
   const weeklyRateSeries = chartData?.weeklyRateHistory?.slice(-weeks) ?? []
+  const weeklyTaskSeries = chartData?.weeklyTaskHistory?.slice(-weeks) ?? []
   const raidRateSeries = chartData?.raidRateHistory?.slice(-weeks) ?? []
+  const raidTaskSeries = chartData?.raidTaskHistory?.slice(-weeks) ?? []
   const activeIndex = Math.max(0, Math.min(weeks - 1 - activeWeekOffset, weeks - 1))
   useEffect(() => {
     setActiveWeekOffset((prev) => Math.min(prev, weeks - 1))
@@ -1032,7 +1069,8 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
     })
   }, [dailyDoneSeries.length])
 
-  const doneDays = dailyDoneSeries.reduce((acc, v) => acc + (v ? 1 : 0), 0)
+  const doneDays = dailyDoneSeries.reduce((acc, v) => acc + (v >= 1 ? 1 : 0), 0)
+  const halfDays = dailyDoneSeries.reduce((acc, v) => acc + (v > 0 && v < 1 ? 1 : 0), 0)
   const activeGold = weeklyGoldSeries.length ? weeklyGoldSeries[activeIndex] : 0
   const activeWeekly = weeklyRateSeries.length ? weeklyRateSeries[activeIndex] : 0
   const activeRaid = raidRateSeries.length ? raidRateSeries[activeIndex] : 0
@@ -1044,7 +1082,12 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
     d.setDate(d.getDate() - hoveredDayOffset)
     return d
   }, [hoveredDayOffset, now])
-  const hoveredDayDone = hoveredDayIdx >= 0 ? dailyDoneSeries[hoveredDayIdx] === 1 : false
+  const hoveredDayRatio = hoveredDayIdx >= 0 ? Number(dailyDoneSeries[hoveredDayIdx] ?? 0) : 0
+  const hoveredDayDone = hoveredDayRatio >= 1
+  const hoveredDayPartial = hoveredDayRatio > 0 && hoveredDayRatio < 1
+  const hoveredDayTasks = hoveredDayIdx >= 0 ? (dailyTaskSeries[hoveredDayIdx] ?? { done: [], miss: [] }) : { done: [], miss: [] }
+  const activeWeeklyTasks = weeklyTaskSeries[activeIndex] ?? { done: [], miss: [] }
+  const activeRaidTasks = raidTaskSeries[activeIndex] ?? { done: [], miss: [] }
   const weakChoreHints = useMemo(() => {
     const hints = []
     if (activeWeekly < 100) hints.push(`주간 숙제 ${100 - activeWeekly}% 남음`)
@@ -1145,18 +1188,22 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
                   <div className="homework-card-graph-section">
                     <div className="homework-card-graph-section-head">
                       <span>일일 기록</span>
-                      <span>{doneDays}/{days}일 완료</span>
+                      <span>{doneDays}/{days}일 완료 · 반완 {halfDays}일</span>
                     </div>
                     <div className="homework-card-graph-hover-readout">
                       <span>{formatDate(hoveredDayDate)}</span>
-                      <strong>{hoveredDayDone ? '완료' : '미완료'}</strong>
-                      {!hoveredDayDone && <em>일일 숙제 남음</em>}
+                      <strong>{hoveredDayDone ? '완료' : hoveredDayPartial ? '부분 완료' : '미완료'}</strong>
+                      {(hoveredDayPartial || !hoveredDayDone) && <em>일일 숙제 남음</em>}
+                    </div>
+                    <div className="homework-card-graph-task-readout">
+                      <span>완료: {hoveredDayTasks.done.length ? hoveredDayTasks.done.join(', ') : '-'}</span>
+                      <span>미완료: {hoveredDayTasks.miss.length ? hoveredDayTasks.miss.join(', ') : '-'}</span>
                     </div>
                     <div className="homework-card-daily-strip">
                       {dailyDoneSeries.map((done, idx) => (
                         <span
                           key={idx}
-                          className={`homework-card-daily-cell ${done ? 'is-done' : 'is-miss'}`}
+                          className={`homework-card-daily-cell ${done >= 1 ? 'is-done' : done > 0 ? 'is-half' : 'is-miss'}`}
                           onMouseEnter={() => setActiveDayIndex(idx)}
                         />
                       ))}
@@ -1290,6 +1337,14 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
                           })}
                         </div>
                       </div>
+                    </div>
+                    <div className="homework-card-graph-task-readout">
+                      <span>주간 완료: {activeWeeklyTasks.done.length ? activeWeeklyTasks.done.join(', ') : '-'}</span>
+                      <span>주간 미완료: {activeWeeklyTasks.miss.length ? activeWeeklyTasks.miss.join(', ') : '-'}</span>
+                    </div>
+                    <div className="homework-card-graph-task-readout">
+                      <span>레이드 완료: {activeRaidTasks.done.length ? activeRaidTasks.done.join(', ') : '-'}</span>
+                      <span>레이드 미완료: {activeRaidTasks.miss.length ? activeRaidTasks.miss.join(', ') : '-'}</span>
                     </div>
                   </div>
                   </>
@@ -1983,9 +2038,9 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
               </button>
             </div>
           </div>
-          <div className="homework-list homework-raid-list" role="list">
+          <ul className="homework-list homework-raid-list">
             {raidSlots.length === 0 ? (
-              <div className="homework-raid-empty">편집에서 표시할 레이드를 선택하세요.</div>
+              <li className="homework-raid-empty">편집에서 표시할 레이드를 선택하세요.</li>
             ) : (
               raidSlots
                 .map((id) => RAID_ITEMS.find((r) => r.id === id))
@@ -1997,13 +2052,15 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
                   const busRole = raidBusRoles[item.id] ?? 'driver'
                   const isChecked = raidChecked.has(item.id) || (mode === 'bus' && hasValidBusFee(item.id))
                   return (
-                    <div key={item.id} className={`homework-raid-card ${isChecked ? 'is-checked' : ''}`} role="listitem">
-                      <button
-                        type="button"
-                        className={`homework-raid-row homework-raid-row-display ${isChecked ? 'is-checked' : ''}`}
-                        onClick={() => toggleRaid(item.id)}
-                        aria-pressed={isChecked}
-                      >
+                    <li
+                      key={item.id}
+                      role="button"
+                      tabIndex={0}
+                      className={`homework-raid-row homework-raid-row-display ${isChecked ? 'is-checked' : ''}`}
+                      onClick={() => toggleRaid(item.id)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRaid(item.id); } }}
+                      aria-pressed={isChecked}
+                    >
                         <div className="homework-raid-chip-head">
                         <div className="homework-raid-row-main">
                           <span className="homework-item-label">{item.label}</span>
@@ -2027,7 +2084,6 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
                           </div>
                         )}
                         </div>
-                      </button>
                       {mode === 'bus' && (
                         <div
                           className={`homework-raid-busfee-wrap ${busFeeAttentionId === item.id ? 'is-attention' : ''}`}
@@ -2111,11 +2167,11 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
                           </div>
                         </div>
                       )}
-                    </div>
+                    </li>
                   )
                 })
             )}
-          </div>
+          </ul>
         </div>
       </CardContent>
       )}
@@ -2613,6 +2669,9 @@ export function HomeworkPanel() {
     const expWeeklyRateHistory = new Array(24).fill(0)
     const expRaidRateHistory = new Array(24).fill(0)
     const expWeeklyGoldHistory = new Array(24).fill(0)
+    let expDailyTaskHistory = null
+    let expWeeklyTaskHistory = null
+    let expRaidTaskHistory = null
     for (const item of displayOrder) {
       if (item.type === 'character' && item.character) {
         const c = item.character
@@ -2622,9 +2681,15 @@ export function HomeworkPanel() {
         const dailyRate = 60 + (h % 41)
         const weeklyRate = 50 + ((h >> 4) % 51)
         const raidRate = 40 + ((h >> 8) % 61)
-        const dailyDoneHistory = makeDailyDoneHistory(h, 168)
-        const weeklyRateHistory = makeWeeklyRateHistory(h, 24, 45, 100)
-        const raidRateHistory = makeWeeklyRateHistory(h + 13, 24, 35, 100)
+        const dailyTaskHistory = makeDailyTaskHistory(h, DAILY_ITEMS, 168)
+        const weeklyTaskHistory = makeWeeklyTaskHistory(h + 7, WEEKLY_ITEMS, 24)
+        const selectedRaidItems = loadRaidSlots(key, c?.ItemAvgLevel ?? c?.ItemMaxLevel)
+          .map((id) => RAID_ITEMS.find((r) => r.id === id))
+          .filter(Boolean)
+        const raidTaskHistory = makeWeeklyTaskHistory(h + 13, selectedRaidItems, 24)
+        const dailyDoneHistory = dailyTaskHistory.map((d) => d.ratio)
+        const weeklyRateHistory = weeklyTaskHistory.map((w) => Math.round(w.ratio * 100))
+        const raidRateHistory = raidTaskHistory.map((r) => Math.round(r.ratio * 100))
         const weeklyGoldHistory = makeWeeklyGoldHistory(h + 29, 24)
         byKey[key] = {
           name: c?.CharacterName ?? '알 수 없음',
@@ -2633,8 +2698,11 @@ export function HomeworkPanel() {
           weeklyRate,
           raidRate,
           dailyDoneHistory,
+          dailyTaskHistory,
           weeklyRateHistory,
+          weeklyTaskHistory,
           raidRateHistory,
+          raidTaskHistory,
           weeklyGoldHistory,
         }
         expGold += gold
@@ -2647,6 +2715,9 @@ export function HomeworkPanel() {
           expRaidRateHistory[i] += raidRateHistory[i]
           expWeeklyGoldHistory[i] += weeklyGoldHistory[i]
         }
+        if (!expDailyTaskHistory) expDailyTaskHistory = dailyTaskHistory
+        if (!expWeeklyTaskHistory) expWeeklyTaskHistory = weeklyTaskHistory
+        if (!expRaidTaskHistory) expRaidTaskHistory = raidTaskHistory
         expCount += 1
       }
     }
@@ -2658,9 +2729,12 @@ export function HomeworkPanel() {
         dailyRate: expCount > 0 ? Math.round(expDaily / expCount) : 0,
         weeklyRate: expCount > 0 ? Math.round(expWeekly / expCount) : 0,
         raidRate: expCount > 0 ? Math.round(expRaid / expCount) : 0,
-        dailyDoneHistory: expCount > 0 ? expDailyDoneHistory.map((v) => (v > 0 ? 1 : 0)) : new Array(168).fill(0),
+        dailyDoneHistory: expCount > 0 ? expDailyDoneHistory.map((v) => Number((v / expCount).toFixed(2))) : new Array(168).fill(0),
+        dailyTaskHistory: expDailyTaskHistory ?? new Array(168).fill({ done: [], miss: [] }),
         weeklyRateHistory: expCount > 0 ? expWeeklyRateHistory.map((v) => Math.round(v / expCount)) : new Array(24).fill(0),
+        weeklyTaskHistory: expWeeklyTaskHistory ?? new Array(24).fill({ done: [], miss: [] }),
         raidRateHistory: expCount > 0 ? expRaidRateHistory.map((v) => Math.round(v / expCount)) : new Array(24).fill(0),
+        raidTaskHistory: expRaidTaskHistory ?? new Array(24).fill({ done: [], miss: [] }),
         weeklyGoldHistory: expWeeklyGoldHistory,
       }
     }
@@ -2824,7 +2898,6 @@ export function HomeworkPanel() {
                   {!showRegisterForm && <span>캐릭터</span>}
                 </button>
                 <div className={`homework-remote-register ${showRegisterForm ? 'is-open' : ''}`}>
-                  {showRegisterForm && (
                     <>
                     <div className="homework-remote-register-row">
                       <Input
@@ -2845,6 +2918,7 @@ export function HomeworkPanel() {
                           const key = getCharKey(char)
                           const isAdded = keysRegistered.has(key)
                           const level = formatItemLevel(char?.ItemAvgLevel ?? char?.ItemMaxLevel)
+                          const expeditionLevel = Number(String(char?.ExpeditionLevel ?? '').replace(/[^\d.]/g, ''))
                           return (
                           <li
                             key={key}
@@ -2864,6 +2938,7 @@ export function HomeworkPanel() {
                             <ClassIcon className={char?.CharacterClassName} size={18} />
                               <span className="homework-remote-search-name">{char.CharacterName}</span>
                               <span className="homework-remote-search-level">{level != null ? level : '-'}</span>
+                              <span className="homework-remote-search-exp-level">{Number.isFinite(expeditionLevel) && expeditionLevel > 0 ? `원정대 Lv.${expeditionLevel}` : ''}</span>
                               {isAdded && <span className="homework-remote-search-added-mark" aria-hidden><IconCheck /></span>}
                             </li>
                           )
@@ -2871,7 +2946,6 @@ export function HomeworkPanel() {
                       </ul>
                     )}
                     </>
-                  )}
                 </div>
               </div>
               <button type="button" className="homework-toolbar-btn homework-toolbar-btn-order" onClick={() => setOrderModalOpen(true)} title="카드 순서 편집" aria-label="카드 순서 편집" disabled={gridItems.length < 2}>
