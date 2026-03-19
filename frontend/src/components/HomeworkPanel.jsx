@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { DAILY_ITEMS, WEEKLY_ITEMS, RAID_ITEMS, getDefaultRaidIdsByLevel, RAID_GOLD_MOCK } from '../data/homeworkChecklist'
+import { DAILY_ITEMS, WEEKLY_ITEMS, RAID_ITEMS, getDefaultRaidIdsByLevel } from '../data/homeworkChecklist'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -11,6 +11,10 @@ const REGISTERED_KEY = 'oyo_homework_registered'
 const EXPEDITION_CARDS_KEY = 'oyo_homework_expedition_cards'
 const CARD_ORDER_KEY = 'oyo_homework_card_order'
 const VIEW_MODE_KEY = 'oyo_homework_view_mode'
+const EXPEDITION_LEVEL_HINT_KEY = 'oyo_homework_expedition_level_hint'
+const WEEKLY_SLOTS_KEY_PREFIX = 'oyo_homework_weekly_slots_'
+const EXPEDITION_DAILY_SLOTS_KEY_PREFIX = 'oyo_expedition_daily_slots_'
+const EXPEDITION_WEEKLY_SLOTS_KEY_PREFIX = 'oyo_expedition_weekly_slots_'
 
 const IconPlus = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 5v14M5 12h14" /></svg>
@@ -55,8 +59,8 @@ const IconCheck = () => (
 )
 
 function getCharKey(character) {
-  const name = character?.CharacterName ?? ''
-  const server = character?.ServerName ?? ''
+  const name = normalizeText(character?.CharacterName, '')
+  const server = normalizeText(character?.ServerName, '')
   return `${name}:${server}`.trim() || 'unknown'
 }
 
@@ -159,6 +163,23 @@ function saveViewMode(mode) {
   } catch {}
 }
 
+function loadExpeditionLevelHint() {
+  try {
+    const raw = localStorage.getItem(EXPEDITION_LEVEL_HINT_KEY)
+    const v = Number(String(raw ?? '').replace(/[^\d.]/g, ''))
+    return Number.isFinite(v) && v > 0 ? Math.floor(v) : null
+  } catch {
+    return null
+  }
+}
+
+function saveExpeditionLevelHint(v) {
+  try {
+    if (v == null || !Number.isFinite(v) || v <= 0) return
+    localStorage.setItem(EXPEDITION_LEVEL_HINT_KEY, String(Math.floor(v)))
+  } catch {}
+}
+
 function expStorageKeyDaily(expId) {
   return `oyo_expedition_daily_${expId}`
 }
@@ -214,6 +235,9 @@ function storageKeyRaidSlots(charKey) {
 
 function loadRaidSlots(charKey, itemLevel) {
   try {
+    const RAID_ID_ALIASES = {
+      'behemoth-normal': 'behemoth-n',
+    }
     const raw = localStorage.getItem(storageKeyRaidSlots(charKey))
     if (!raw) {
       const defaultIds = getDefaultRaidIdsByLevel(itemLevel)
@@ -221,7 +245,8 @@ function loadRaidSlots(charKey, itemLevel) {
       return defaultIds
     }
     const arr = JSON.parse(raw)
-    return Array.isArray(arr) ? arr : getDefaultRaidIdsByLevel(itemLevel)
+    if (!Array.isArray(arr)) return getDefaultRaidIdsByLevel(itemLevel)
+    return arr.map((id) => RAID_ID_ALIASES[id] ?? id)
   } catch {
     return getDefaultRaidIdsByLevel(itemLevel)
   }
@@ -334,25 +359,69 @@ function saveRaidBusRoles(charKey, weekKey, roles) {
   } catch {}
 }
 
+function loadWeeklySlots(charKey) {
+  try {
+    const stored = localStorage.getItem(`${WEEKLY_SLOTS_KEY_PREFIX}${charKey}`)
+    if (!stored) return WEEKLY_ITEMS.map((x) => x.id)
+    const parsed = JSON.parse(stored)
+    const ids = Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : []
+    const allowed = new Set(WEEKLY_ITEMS.map((x) => x.id))
+    const cleaned = ids.filter((id) => allowed.has(id))
+    return cleaned
+  } catch {
+    return WEEKLY_ITEMS.map((x) => x.id)
+  }
+}
+function saveWeeklySlots(charKey, ids) {
+  try {
+    localStorage.setItem(`${WEEKLY_SLOTS_KEY_PREFIX}${charKey}`, JSON.stringify(ids))
+  } catch {}
+}
+
+function loadExpeditionSlots(prefix, expId, allIds) {
+  try {
+    const stored = localStorage.getItem(`${prefix}${expId}`)
+    if (!stored) return allIds
+    const parsed = JSON.parse(stored)
+    const ids = Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : []
+    const allowed = new Set(allIds)
+    const cleaned = ids.filter((id) => allowed.has(id))
+    return cleaned
+  } catch {
+    return allIds
+  }
+}
+function saveExpeditionSlots(prefix, expId, ids) {
+  try {
+    localStorage.setItem(`${prefix}${expId}`, JSON.stringify(ids))
+  } catch {}
+}
+
 function getCharacterCompletion(character, today, weekKey) {
   const charKey = getCharKey(character)
   const itemLevel = character?.ItemLevel
   const dailyChecked = loadChecked(storageKeyDaily(charKey), storageKeyDailyMeta(charKey), today) ?? new Set()
   const weeklyChecked = loadChecked(storageKeyWeekly(charKey), storageKeyWeeklyMeta(charKey), weekKey) ?? new Set()
+  const weeklySlots = loadWeeklySlots(charKey)
   const raidSlots = loadRaidSlots(charKey, itemLevel)
   const raidChecked = loadChecked(storageKeyRaidChecked(charKey), storageKeyRaidCheckedMeta(charKey), weekKey) ?? new Set()
   const raidModes = loadRaidModes(charKey, weekKey)
   const raidBusFees = loadRaidBusFees(charKey, weekKey)
   const dailyRatio = DAILY_ITEMS.length ? dailyChecked.size / DAILY_ITEMS.length : 0
-  const weeklyRatio = WEEKLY_ITEMS.length ? weeklyChecked.size / WEEKLY_ITEMS.length : 0
+  const weeklyRatio = weeklySlots.length ? [...weeklyChecked].filter((id) => weeklySlots.includes(id)).length / weeklySlots.length : 1
   const hasValidBusFee = (id) => {
     const v = raidBusFees[id]
     if (v == null || v === '') return false
     const n = Number(String(v).replace(/,/g, '').trim())
     return Number.isFinite(n)
   }
-  const raidDone = raidSlots.filter((id) => raidChecked.has(id) || (raidModes[id] === 'bus' && hasValidBusFee(id))).length
-  const raidRatio = raidSlots.length ? raidDone / raidSlots.length : 0
+  const raidDone = raidSlots.filter((id) => {
+    const meta = RAID_ITEMS.find((it) => it.id === id)
+    const defaultEffectiveMode = 'single'
+    const effectiveMode = raidModes[id] ?? defaultEffectiveMode
+    return raidChecked.has(id)
+  }).length
+  const raidRatio = raidSlots.length ? raidDone / raidSlots.length : 1
   return dailyRatio >= 1 && weeklyRatio >= 1 && raidRatio >= 1
 }
 
@@ -361,6 +430,58 @@ function formatItemLevel(v) {
   const s = String(v).replace(/,/g, '').trim()
   const n = Number(s)
   return Number.isFinite(n) ? n : null
+}
+
+function formatSearchItemLevel(v) {
+  const n = formatItemLevel(v)
+  return n != null ? Math.floor(n) : null
+}
+
+function normalizeText(v, fallback = '') {
+  if (v == null) return fallback
+  const s = String(v).trim()
+  const lower = s.toLowerCase()
+  if (s === '' || lower === 'null' || lower === 'undefined') return fallback
+  return s
+}
+
+function compactTaskLabel(label, kind = 'generic') {
+  const map = {
+    '카오스 던전': '카던',
+    '가디언 토벌': '가토',
+    '낙원 - 천상': '천상',
+    '낙원 - 증명': '증명',
+    '낙원 - 지옥': '옥',
+    '발탄 노말': '발노',
+    '발탄 하드': '발하',
+    '비아키스 노말': '비노',
+    '비아키스 하드': '비하',
+    '쿠크세이튼 노말': '쿠노',
+    '쿠크세이튼 하드': '쿠하',
+    '카양겔 노말': '카노',
+    '카양겔 하드': '카하',
+    '일리아칸 노말': '일노',
+    '일리아칸 하드': '일하',
+    '상아탑 노말': '상노',
+    '상아탑 하드': '상하',
+    '에키드나 노말': '에노',
+    '에키드나 하드': '에하',
+    '베히모스': '베히',
+    '세르카': '세르카',
+    '지평의 성당': '성당',
+    '종막:카제로스': '종막',
+    '4막:아르모체': '4막',
+    '3막:모르둠': '3막',
+    '2막:아브렐슈드': '2막',
+    '아브렐슈드 노말': '아브노',
+    '아브렐슈드 하드': '아브하',
+    '카멘 노말': '카멘노',
+    '카멘 하드': '카멘하',
+  }
+  if (map[label]) return map[label]
+  if (kind === 'weekly' && label.includes('-')) return label.split('-').pop()?.trim() || label
+  if (label.length <= 4) return label
+  return label.replace(/\s+/g, '').slice(0, 4)
 }
 
 function ClassIcon({ className, size = 36 }) {
@@ -423,7 +544,13 @@ function RaidSelectModal({ characterName, selectedIds, raidModes, onSave, onClos
   const handleSave = () => {
     const ids = RAID_ITEMS.filter((item) => picked.has(item.id)).map((item) => item.id)
     const cleanedModes = {}
-    ids.forEach((id) => { if (modes[id]) cleanedModes[id] = modes[id] })
+    ids.forEach((id) => {
+      const meta = RAID_ITEMS.find((x) => x.id === id)
+      const isBusOnly = Boolean(meta?.busOnly)
+      const mode = modes[id]
+      if (isBusOnly) cleanedModes[id] = 'bus'
+      else if (mode) cleanedModes[id] = mode
+    })
     onSave(ids, cleanedModes)
   }
 
@@ -441,44 +568,518 @@ function RaidSelectModal({ characterName, selectedIds, raidModes, onSave, onClos
         </header>
         <div className="modal-content">
           <ul className="homework-raid-modal-list">
-            {RAID_ITEMS.map((item) => {
-              const mode = modes[item.id]
-              const isSelected = picked.has(item.id)
-              return (
+            {(() => {
+              const raidCategoryDefs = [
+                { key: 'shadow', label: '그림자 레이드' },
+                { key: 'abyss', label: '어비스 던전' },
+                { key: 'kazerus', label: '카제로스 레이드' },
+                { key: 'epic', label: '에픽 레이드' },
+              ]
+
+              const normalizeCategoryKey = (value) => {
+                if (value == null) return 'shadow'
+                const s = String(value).trim().toLowerCase()
+                if (!s) return 'shadow'
+                if (s.includes('그림자') || s.includes('shadow')) return 'shadow'
+                if (s.includes('카제로스') || s.includes('kazerus')) return 'kazerus'
+                if (s.includes('어비스') || s.includes('abyss') || s.includes('던전')) return 'abyss'
+                if (s.includes('에픽') || s.includes('epic')) return 'epic'
+                return 'shadow'
+              }
+
+              return raidCategoryDefs.flatMap((cat) => {
+                const categoryItems = RAID_ITEMS.filter((it) => normalizeCategoryKey(it.category ?? it.group ?? it.raidCategory ?? it.raidGroup) === cat.key)
+                return [
+                  <li key={`${cat.key}-head`} className="homework-raid-modal-category-head">
+                    {cat.label}
+                  </li>,
+                  ...(categoryItems.length
+                    ? categoryItems.map((item) => {
+                        const mode = modes[item.id]
+                        const isSelected = picked.has(item.id)
+                        const isBusOnly = Boolean(item.busOnly)
+                        const effectiveMode = isBusOnly ? 'bus' : mode
+                        const difficultyLabel =
+                          item.difficulty === 'nightmare' ? '나메' : item.difficulty === 'hard' ? '하드' : '노말'
+                        return (
+                          <li
+                            key={item.id}
+                            role="button"
+                            tabIndex={0}
+                            className={`homework-raid-modal-row ${isSelected ? 'is-selected' : ''}`}
+                            onClick={() => toggleRowPick(item.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                toggleRowPick(item.id)
+                              }
+                            }}
+                            aria-pressed={isSelected}
+                          >
+                            <span className="homework-raid-modal-row-label">
+                              {item.label}
+                              {isBusOnly ? <span className="homework-raid-badge homework-raid-badge-bus" style={{ marginLeft: 8 }}>{difficultyLabel}</span> : null}
+                            </span>
+                            <div className="homework-raid-mode-btns">
+                              {!isBusOnly && (
+                                <button
+                                  type="button"
+                                  className={`homework-raid-mode-btn ${effectiveMode === 'single' ? 'is-active' : ''}`}
+                                  onClick={(e) => setRaidModeInModal(item.id, 'single', e)}
+                                  aria-pressed={effectiveMode === 'single'}
+                                  aria-label={`${item.label} 싱글`}
+                                >
+                                  싱글
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                className={`homework-raid-mode-btn ${effectiveMode === 'bus' ? 'is-active' : ''}`}
+                                onClick={(e) => setRaidModeInModal(item.id, 'bus', e)}
+                                aria-pressed={effectiveMode === 'bus'}
+                                aria-label={`${item.label} 버스`}
+                              >
+                                버스
+                              </button>
+                            </div>
+                          </li>
+                        )
+                      })
+                    : [
+                        <li key={`${cat.key}-empty`} className="homework-raid-empty">
+                          {cat.key === 'epic' ? '추가 예정' : '표시할 레이드 없음'}
+                        </li>,
+                      ]),
+                ]
+              })
+            })()}
+          </ul>
+          <div className="homework-raid-modal-actions">
+            <Button type="button" variant="secondary" onClick={onClose}>취소</Button>
+            <Button type="button" onClick={handleSave}>저장</Button>
+          </div>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+/** 캐릭터 카드용: 주간 숙제 + 레이드 한 번에 편집 */
+function CharacterEditModal({ characterName, characterClassName, itemLevelValue, weeklyChecked, raidSlots, raidModes, onSave, onClose }) {
+  const [pickedWeekly, setPickedWeekly] = useState(() => new Set(weeklyChecked))
+  const [pickedRaid, setPickedRaid] = useState(() => {
+    const byGroup = new Map()
+    for (const id of raidSlots) {
+      const meta = RAID_ITEMS.find((x) => x.id === id)
+      const groupKey = meta?.groupKey ?? meta?.id ?? id
+      byGroup.set(groupKey, id)
+    }
+    return new Set(byGroup.values())
+  })
+  // 모달 진입 시, 토글 가능한 레이드(싱글/버스 모두 허용)에서
+  // 로컬스토리지 잔존값 때문에 버스가 자동 활성되는 현상을 방지합니다.
+  const [modes, setModes] = useState(() => {
+    const init = { ...raidModes }
+    for (const id of raidSlots) {
+      init[id] = 'single'
+    }
+    return init
+  })
+  const raidItemById = useMemo(() => new Map(RAID_ITEMS.map((it) => [it.id, it])), [])
+  const [denyBusClickGroupKey, setDenyBusClickGroupKey] = useState(null)
+  const flashDenyBus = (groupKey) => {
+    setDenyBusClickGroupKey(groupKey)
+    setTimeout(() => setDenyBusClickGroupKey((prev) => (prev === groupKey ? null : prev)), 220)
+  }
+  const [denyDifficultyClickGroupKey, setDenyDifficultyClickGroupKey] = useState(null)
+  const flashDenyDifficulty = (groupKey) => {
+    setDenyDifficultyClickGroupKey(groupKey)
+    setTimeout(() => setDenyDifficultyClickGroupKey((prev) => (prev === groupKey ? null : prev)), 220)
+  }
+  const [denyLevelRaidId, setDenyLevelRaidId] = useState(null)
+  const [toast, setToast] = useState(null)
+  const showToast = (message) => {
+    const id = Date.now()
+    setToast({ id, message })
+    setTimeout(() => {
+      setToast((prev) => (prev?.id === id ? null : prev))
+    }, 1800)
+  }
+  const flashLevelDeny = (raidId, message) => {
+    setDenyLevelRaidId(raidId)
+    setTimeout(() => setDenyLevelRaidId((prev) => (prev === raidId ? null : prev)), 220)
+    showToast(message)
+  }
+
+  const toggleWeekly = (id) => {
+    setPickedWeekly((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const getDefaultModeForRaidId = (raidId) => {
+    return 'single'
+  }
+
+  // 그룹(예: 세르카)에서 선택을 완전히 해제
+  const clearGroupSelection = (groupKey) => {
+    const groupIds = RAID_ITEMS.filter((x) => (x.groupKey ?? x.id) === groupKey).map((x) => x.id)
+    setPickedRaid((prev) => {
+      const next = new Set(prev)
+      groupIds.forEach((gid) => next.delete(gid))
+      return next
+    })
+    setModes((prev) => {
+      const next = { ...prev }
+      groupIds.forEach((gid) => { delete next[gid] })
+      return next
+    })
+  }
+
+  // 그룹(예: 세르카) 안에서는 난이도(raidId) 하나만 고르도록 강제
+  const selectRaidDifficulty = (raidId) => {
+    const meta = raidItemById.get(raidId)
+    if (!meta) return
+    const myLevel = Number(itemLevelValue)
+    const raidEntry = Number(meta.entryLevel)
+    if (Number.isFinite(myLevel) && Number.isFinite(raidEntry) && raidEntry > myLevel) {
+      flashLevelDeny(raidId, `입장 레벨 부족 (요구 Lv.${raidEntry})`)
+      return
+    }
+    const groupKey = meta.groupKey ?? meta.id
+    const groupIds = RAID_ITEMS.filter((x) => (x.groupKey ?? x.id) === groupKey).map((x) => x.id)
+
+    // 같은 난이도 버튼을 다시 누르면 해제
+    if (pickedRaid.has(raidId)) {
+      clearGroupSelection(groupKey)
+      return
+    }
+
+    setPickedRaid((prev) => {
+      const next = new Set(prev)
+      groupIds.forEach((gid) => next.delete(gid))
+      next.add(raidId)
+      return next
+    })
+
+    setModes((prev) => {
+      const next = { ...prev }
+      groupIds.forEach((gid) => { if (gid !== raidId) delete next[gid] })
+      // 난이도 선택 시 버스태그는 "기본값(싱글/버스)"으로 리셋
+      next[raidId] = getDefaultModeForRaidId(raidId)
+
+      // disallowed mode 강제 방지
+      const currentMode = next[raidId]
+      if (currentMode === 'bus' && meta.difficulty === 'single') next[raidId] = 'single'
+      return next
+    })
+  }
+
+  const setRaidModeInModal = (raidId, mode, e) => {
+    if (e) e.stopPropagation()
+    const meta = raidItemById.get(raidId)
+    if (!meta) return
+    const allow = mode === 'bus' ? meta.difficulty !== 'single' : true
+    if (!allow) return
+    setPickedRaid((prev) => new Set(prev).add(raidId))
+    setModes((prev) => ({ ...prev, [raidId]: mode }))
+  }
+
+  const handleSave = () => {
+    const raidIds = RAID_ITEMS.filter((item) => pickedRaid.has(item.id)).map((item) => item.id)
+    const cleanedModes = {}
+    raidIds.forEach((id) => {
+      const mode = modes[id] ?? getDefaultModeForRaidId(id)
+      const defaultMode = getDefaultModeForRaidId(id)
+      if (mode && mode !== defaultMode) cleanedModes[id] = mode
+    })
+    onSave(pickedWeekly, raidIds, cleanedModes)
+    onClose()
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <section className="modal-panel homework-raid-modal homework-card-edit-modal" onClick={(e) => e.stopPropagation()}>
+        <header className="modal-header homework-edit-header">
+          <div className="homework-edit-hero">
+            <ClassIcon className={characterClassName} size={46} />
+            <div className="homework-edit-meta">
+              <h2 className="homework-edit-name">{characterName}</h2>
+              <div className="homework-edit-level">{itemLevelValue != null ? `Lv.${itemLevelValue}` : '-'}</div>
+            </div>
+          </div>
+          <div aria-hidden />
+        </header>
+        <div className="modal-content">
+          <div className="homework-card-edit-section">
+            <h3 className="homework-card-edit-section-title">주간 숙제</h3>
+            <ul className="homework-raid-modal-list">
+              {WEEKLY_ITEMS.map((item) => (
                 <li
                   key={item.id}
                   role="button"
                   tabIndex={0}
-                  className={`homework-raid-modal-row ${isSelected ? 'is-selected' : ''}`}
-                  onClick={() => toggleRowPick(item.id)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRowPick(item.id); } }}
-                  aria-pressed={isSelected}
+                  className={`homework-raid-modal-row ${pickedWeekly.has(item.id) ? 'is-selected' : ''}`}
+                  onClick={() => toggleWeekly(item.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleWeekly(item.id); } }}
+                  aria-pressed={pickedWeekly.has(item.id)}
                 >
                   <span className="homework-raid-modal-row-label">{item.label}</span>
-                  <div className="homework-raid-mode-btns">
-                    <button
-                      type="button"
-                      className={`homework-raid-mode-btn ${mode === 'single' ? 'is-active' : ''}`}
-                      onClick={(e) => setRaidModeInModal(item.id, 'single', e)}
-                      aria-pressed={mode === 'single'}
-                      aria-label={`${item.label} 싱글`}
-                    >
-                      싱글
-                    </button>
-                    <button
-                      type="button"
-                      className={`homework-raid-mode-btn ${mode === 'bus' ? 'is-active' : ''}`}
-                      onClick={(e) => setRaidModeInModal(item.id, 'bus', e)}
-                      aria-pressed={mode === 'bus'}
-                      aria-label={`${item.label} 버스`}
-                    >
-                      버스
-                    </button>
-                  </div>
                 </li>
-              )
-            })}
-          </ul>
+              ))}
+            </ul>
+          </div>
+          <div className="homework-card-edit-section">
+            <h3 className="homework-card-edit-section-title">레이드</h3>
+            <ul className="homework-raid-modal-list">
+              {(() => {
+                const raidCategoryDefs = [
+                  { key: 'shadow', label: '그림자 레이드' },
+                  { key: 'abyss', label: '어비스 던전' },
+                  { key: 'kazerus', label: '카제로스 레이드' },
+                  { key: 'epic', label: '에픽 레이드' },
+                ]
+
+                const normalizeCategoryKey = (value) => {
+                  if (value == null) return 'shadow'
+                  const s = String(value).trim().toLowerCase()
+                  if (!s) return 'shadow'
+                  if (s.includes('그림자') || s.includes('shadow')) return 'shadow'
+                  if (s.includes('카제로스') || s.includes('kazerus')) return 'kazerus'
+                  if (s.includes('어비스') || s.includes('abyss') || s.includes('던전')) return 'abyss'
+                  if (s.includes('에픽') || s.includes('epic')) return 'epic'
+                  return 'shadow'
+                }
+
+                return raidCategoryDefs.flatMap((cat) => {
+                  const categoryItems = RAID_ITEMS.filter((it) => normalizeCategoryKey(it.category ?? it.group ?? it.raidCategory ?? it.raidGroup) === cat.key)
+                  const difficultyToLabel = (diff) => (
+                    diff === 'single'
+                      ? '싱글'
+                      : diff === 'stage1'
+                        ? '1단'
+                        : diff === 'stage2'
+                          ? '2단'
+                          : diff === 'stage3'
+                            ? '3단'
+                            : diff === 'nightmare'
+                              ? '나메'
+                              : diff === 'hard'
+                                ? '하드'
+                                : '노말'
+                  )
+                  const groupKeys = Array.from(new Set(categoryItems.map((it) => it.groupKey ?? it.id)))
+                  return [
+                    <li key={`${cat.key}-head`} className="homework-raid-modal-category-head">
+                      {cat.label}
+                    </li>,
+                    ...(categoryItems.length
+                      ? groupKeys.map((groupKey) => {
+                        const groupItems = categoryItems
+                          .filter((it) => (it.groupKey ?? it.id) === groupKey)
+                          .sort((a, b) => {
+                            const order = { single: 0, normal: 1, hard: 2, nightmare: 3 }
+                            return (order[a.difficulty] ?? 99) - (order[b.difficulty] ?? 99)
+                          })
+                        const pickedId = groupItems.find((it) => pickedRaid.has(it.id))?.id ?? null
+                        const selectedId = pickedId
+                        const groupHasBusOption = groupItems.some((it) => {
+                          const m = raidItemById.get(it.id)
+                          return m?.difficulty !== 'single'
+                        })
+                        const selectedMode = selectedId
+                          ? (modes[selectedId] ?? getDefaultModeForRaidId(selectedId))
+                          : null
+                        const groupLabel = groupItems[0]?.label ?? groupKey
+
+                        return (
+                          <li
+                            key={groupKey}
+                            className={`homework-raid-modal-row ${selectedId ? 'is-selected' : ''}`}
+                            onClick={() => {
+                              // 버튼 영역 밖(행 클릭)에서는 선택 해제
+                              if (pickedId) {
+                                clearGroupSelection(groupKey)
+                                return
+                              }
+                              // 행 자체를 눌러 선택하려는 경우에도 난이도 선택을 유도
+                              flashDenyDifficulty(groupKey)
+                              showToast('난이도를 선택해 주세요.')
+                            }}
+                          >
+                            <span className="homework-raid-modal-row-label">{groupLabel}</span>
+                            <div className="homework-raid-mode-btns" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                              {groupItems.map((it) => {
+                                const isSelected = selectedId === it.id
+                                const diffKey =
+                                  it.difficulty === 'single'
+                                    ? 'single'
+                                    : it.difficulty === 'stage1'
+                                      ? 'normal'
+                                      : it.difficulty === 'stage2'
+                                        ? 'hard'
+                                        : it.difficulty === 'stage3'
+                                          ? 'nightmare'
+                                          : it.difficulty === 'nightmare'
+                                            ? 'nightmare'
+                                            : it.difficulty === 'hard'
+                                              ? 'hard'
+                                              : 'normal'
+                                return (
+                                  <button
+                                    key={it.id}
+                                    type="button"
+                                    className={`homework-raid-mode-btn homework-raid-mode-btn-diff-${diffKey} ${isSelected ? 'is-active' : ''} ${denyDifficultyClickGroupKey === groupKey && !selectedId ? 'is-denied' : ''} ${denyLevelRaidId === it.id ? 'is-denied' : ''}`}
+                                    onClick={(e) => { e.stopPropagation(); selectRaidDifficulty(it.id) }}
+                                    aria-pressed={isSelected}
+                                    aria-label={`${groupLabel} ${difficultyToLabel(it.difficulty)}`}
+                                  >
+                                    {difficultyToLabel(it.difficulty)}
+                                  </button>
+                                )
+                              })}
+                              {groupHasBusOption ? (
+                                (() => {
+                                  const meta = selectedId ? raidItemById.get(selectedId) : undefined
+                                  const canBus = Boolean(meta?.difficulty !== 'single') && Boolean(selectedId)
+                                  const isDeniedUi = !canBus && denyBusClickGroupKey === groupKey
+                                  return (
+                                    <button
+                                      type="button"
+                                      className={`homework-raid-mode-btn homework-raid-mode-btn-bus ${selectedMode === 'bus' ? 'is-active' : ''} ${!canBus ? 'is-disabled' : ''} ${isDeniedUi ? 'is-denied' : ''}`}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        if (!selectedId || !meta) {
+                                          // 난이도 미선택 상태에서 버스를 누르면 "난이도 먼저" 효과(빨간 테두리)
+                                          flashDenyDifficulty(groupKey)
+                                          showToast('난이도를 먼저 선택해 주세요.')
+                                          return
+                                        }
+                                        if (!canBus) {
+                                          flashDenyBus(groupKey)
+                                          showToast('싱글 난이도에서는 버스를 선택할 수 없어요.')
+                                          return
+                                        }
+                                        if (selectedMode === 'bus') {
+                                          setRaidModeInModal(selectedId, 'single', e)
+                                        } else {
+                                          setRaidModeInModal(selectedId, 'bus', e)
+                                        }
+                                      }}
+                                      aria-pressed={selectedMode === 'bus'}
+                                      aria-disabled={!canBus}
+                                      aria-label={`${groupLabel} 버스`}
+                                    >
+                                      버스
+                                    </button>
+                                  )
+                                })()
+                              ) : null}
+                            </div>
+                          </li>
+                        )
+                      })
+                      : [
+                        <li key={`${cat.key}-empty`} className="homework-raid-empty">
+                          {cat.key === 'epic' ? '추가 예정' : '표시할 레이드 없음'}
+                        </li>,
+                      ]),
+                  ]
+                })
+              })()}
+            </ul>
+          </div>
+        </div>
+        {toast ? <div className="homework-modal-toast">{toast.message}</div> : null}
+        <div className="homework-raid-modal-actions">
+          <Button type="button" onClick={handleSave}>저장</Button>
+          <Button type="button" variant="secondary" onClick={onClose}>취소</Button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+/** 원정대 카드용: 일일 + 주간 숙제 한 번에 편집 */
+function ExpeditionEditModal({ dailyChecked, weeklyChecked, onSave, onClose }) {
+  const [pickedDaily, setPickedDaily] = useState(() => new Set(dailyChecked))
+  const [pickedWeekly, setPickedWeekly] = useState(() => new Set(weeklyChecked))
+
+  const toggleDaily = (id) => {
+    setPickedDaily((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleWeekly = (id) => {
+    setPickedWeekly((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const handleSave = () => {
+    onSave(pickedDaily, pickedWeekly)
+    onClose()
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <section className="modal-panel homework-raid-modal homework-card-edit-modal" onClick={(e) => e.stopPropagation()}>
+        <header className="modal-header">
+          <div>
+            <h2>편집 — 원정대</h2>
+            <p>일일·주간 숙제 목록을 설정하세요.</p>
+          </div>
+          <Button type="button" size="sm" variant="secondary" className="modal-close" onClick={onClose}>
+            닫기
+          </Button>
+        </header>
+        <div className="modal-content">
+          <div className="homework-card-edit-section">
+            <h3 className="homework-card-edit-section-title">일일 숙제</h3>
+            <ul className="homework-raid-modal-list">
+              {DAILY_ITEMS.map((item) => (
+                <li
+                  key={item.id}
+                  role="button"
+                  tabIndex={0}
+                  className={`homework-raid-modal-row ${pickedDaily.has(item.id) ? 'is-selected' : ''}`}
+                  onClick={() => toggleDaily(item.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleDaily(item.id); } }}
+                  aria-pressed={pickedDaily.has(item.id)}
+                >
+                  <span className="homework-raid-modal-row-label">{item.label}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="homework-card-edit-section">
+            <h3 className="homework-card-edit-section-title">주간 숙제</h3>
+            <ul className="homework-raid-modal-list">
+              {WEEKLY_ITEMS.map((item) => (
+                <li
+                  key={item.id}
+                  role="button"
+                  tabIndex={0}
+                  className={`homework-raid-modal-row ${pickedWeekly.has(item.id) ? 'is-selected' : ''}`}
+                  onClick={() => toggleWeekly(item.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleWeekly(item.id); } }}
+                  aria-pressed={pickedWeekly.has(item.id)}
+                >
+                  <span className="homework-raid-modal-row-label">{item.label}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
           <div className="homework-raid-modal-actions">
             <Button type="button" variant="secondary" onClick={onClose}>취소</Button>
             <Button type="button" onClick={handleSave}>저장</Button>
@@ -1029,6 +1630,7 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
   const [activeWeekOffset, setActiveWeekOffset] = useState(0)
   const [activeDayIndex, setActiveDayIndex] = useState(null)
   const [isGoldChartHover, setIsGoldChartHover] = useState(false)
+  const [hoveredRateType, setHoveredRateType] = useState(null)
 
   const now = useMemo(() => new Date(), [])
   const startOfCurrentWeek = useMemo(() => {
@@ -1054,6 +1656,7 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
   const dailyDoneSeries = chartData?.dailyDoneHistory?.slice(-days) ?? []
   const dailyTaskSeries = chartData?.dailyTaskHistory?.slice(-days) ?? []
   const weeklyGoldSeries = chartData?.weeklyGoldHistory?.slice(-weeks) ?? []
+  const weeklyBoundGoldSeries = chartData?.weeklyBoundGoldHistory?.slice(-weeks) ?? []
   const weeklyRateSeries = chartData?.weeklyRateHistory?.slice(-weeks) ?? []
   const weeklyTaskSeries = chartData?.weeklyTaskHistory?.slice(-weeks) ?? []
   const raidRateSeries = chartData?.raidRateHistory?.slice(-weeks) ?? []
@@ -1072,9 +1675,11 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
   const doneDays = dailyDoneSeries.reduce((acc, v) => acc + (v >= 1 ? 1 : 0), 0)
   const halfDays = dailyDoneSeries.reduce((acc, v) => acc + (v > 0 && v < 1 ? 1 : 0), 0)
   const activeGold = weeklyGoldSeries.length ? weeklyGoldSeries[activeIndex] : 0
+  const activeBoundGold = weeklyBoundGoldSeries.length ? weeklyBoundGoldSeries[activeIndex] : 0
   const activeWeekly = weeklyRateSeries.length ? weeklyRateSeries[activeIndex] : 0
   const activeRaid = raidRateSeries.length ? raidRateSeries[activeIndex] : 0
   const activeGoldLeftPct = weeks > 1 ? (activeIndex / (weeks - 1)) * 100 : 0
+  const goldOverlayEdgeClass = activeGoldLeftPct <= 16 ? 'is-left' : activeGoldLeftPct >= 84 ? 'is-right' : ''
   const hoveredDayIdx = activeDayIndex == null ? dailyDoneSeries.length - 1 : activeDayIndex
   const hoveredDayOffset = hoveredDayIdx >= 0 ? days - 1 - hoveredDayIdx : 0
   const hoveredDayDate = useMemo(() => {
@@ -1088,13 +1693,13 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
   const hoveredDayTasks = hoveredDayIdx >= 0 ? (dailyTaskSeries[hoveredDayIdx] ?? { done: [], miss: [] }) : { done: [], miss: [] }
   const activeWeeklyTasks = weeklyTaskSeries[activeIndex] ?? { done: [], miss: [] }
   const activeRaidTasks = raidTaskSeries[activeIndex] ?? { done: [], miss: [] }
-  const weakChoreHints = useMemo(() => {
-    const hints = []
-    if (activeWeekly < 100) hints.push(`주간 숙제 ${100 - activeWeekly}% 남음`)
-    if (activeRaid < 100) hints.push(`레이드 ${100 - activeRaid}% 남음`)
-    if (hints.length === 0) hints.push('이번 주 숙제 거의 완료')
-    return hints
-  }, [activeWeekly, activeRaid])
+  const dailyStatusText = useMemo(() => {
+    if (hoveredDayDone) return '완료'
+    const miss = hoveredDayTasks.miss
+    if (miss.length >= 2) return '미완료'
+    if (miss.length === 1) return `${miss[0]} 미완료`
+    return '미완료'
+  }, [hoveredDayDone, hoveredDayTasks])
 
   const buildLineCoords = (values, width, height, fixedMin = null, fixedMax = null) => {
     if (!values || values.length === 0) return []
@@ -1128,12 +1733,18 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
   }
   const goldLineWidth = 140
   const goldLineHeight = 56
-  const goldLineCoords = buildLineCoords(weeklyGoldSeries, goldLineWidth, goldLineHeight, 0, null)
+  const commonGoldMax = Math.max(1, ...weeklyGoldSeries, ...weeklyBoundGoldSeries)
+  const goldLineCoords = buildLineCoords(weeklyGoldSeries, goldLineWidth, goldLineHeight, 0, commonGoldMax)
   const goldLinePath = buildSmoothPath(goldLineCoords)
   const goldAreaPath = goldLineCoords.length
     ? `${goldLinePath} L ${goldLineCoords[goldLineCoords.length - 1].x} ${goldLineHeight} L 0 ${goldLineHeight} Z`
     : ''
+
+  const boundLineCoords = buildLineCoords(weeklyBoundGoldSeries, goldLineWidth, goldLineHeight, 0, commonGoldMax)
+  const boundLinePath = buildSmoothPath(boundLineCoords)
+
   const activeGoldPoint = goldLineCoords[activeIndex]
+  const activeBoundGoldPoint = boundLineCoords[activeIndex]
 
   return (
     <div className={`homework-card-flip-wrap ${isFlipped ? 'is-flipped' : ''}`}>
@@ -1192,12 +1803,7 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
                     </div>
                     <div className="homework-card-graph-hover-readout">
                       <span>{formatDate(hoveredDayDate)}</span>
-                      <strong>{hoveredDayDone ? '완료' : hoveredDayPartial ? '부분 완료' : '미완료'}</strong>
-                      {(hoveredDayPartial || !hoveredDayDone) && <em>일일 숙제 남음</em>}
-                    </div>
-                    <div className="homework-card-graph-task-readout">
-                      <span>완료: {hoveredDayTasks.done.length ? hoveredDayTasks.done.join(', ') : '-'}</span>
-                      <span>미완료: {hoveredDayTasks.miss.length ? hoveredDayTasks.miss.join(', ') : '-'}</span>
+                      <strong>{dailyStatusText}</strong>
                     </div>
                     <div className="homework-card-daily-strip">
                       {dailyDoneSeries.map((done, idx) => (
@@ -1215,14 +1821,12 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
                       <span>{getWeekRangeLabel(activeWeekOffset)} 선택</span>
                     </div>
                     <div className="homework-card-weekly-gold-panel">
-                      <div className="homework-card-weekly-gold-head">
+                    <div className="homework-card-weekly-gold-head">
                         <span>골드 획득량 (라인)</span>
-                        <strong>{activeGold.toLocaleString()} G</strong>
-                      </div>
-                      <div className="homework-card-graph-weekly-hint">
-                        {weakChoreHints.map((hint) => (
-                          <span key={hint}>{hint}</span>
-                        ))}
+                        <div className="homework-card-weekly-gold-head-values">
+                          <strong>{activeGold.toLocaleString()} G</strong>
+                          <strong className="is-bound">{activeBoundGold.toLocaleString()} 귀속골</strong>
+                        </div>
                       </div>
                       <div className="homework-card-weekly-gold-line-wrap" onMouseEnter={() => setIsGoldChartHover(true)} onMouseLeave={() => setIsGoldChartHover(false)}>
                         <div className="homework-card-weekly-gold-plot">
@@ -1232,6 +1836,7 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
                             <line className="homework-card-weekly-gold-guide" x1="0" y1={goldLineHeight * 0.8} x2={goldLineWidth} y2={goldLineHeight * 0.8} />
                             <path className="homework-card-weekly-gold-area" d={goldAreaPath} />
                             <path className="homework-card-weekly-gold-path" d={goldLinePath} />
+                            {boundLinePath ? <path className="homework-card-weekly-gold-bound-path" d={boundLinePath} /> : null}
                           </svg>
                           <div className="homework-card-weekly-gold-hitzones">
                             {weeklyGoldSeries.map((value, idx) => {
@@ -1241,7 +1846,7 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
                                   key={idx}
                                   type="button"
                                   className={`homework-card-weekly-gold-hit ${activeWeekOffset === weekOffset ? 'is-active' : ''}`}
-                                  aria-label={`${getWeekRangeLabel(weekOffset)} 골드 ${value.toLocaleString()} G`}
+                                  aria-label={`${getWeekRangeLabel(weekOffset)} 골드 ${value.toLocaleString()} G / 귀속골 ${(weeklyBoundGoldSeries[idx] ?? 0).toLocaleString()}`}
                                   onMouseEnter={() => setActiveWeekOffset(weekOffset)}
                                   onFocus={() => setActiveWeekOffset(weekOffset)}
                                 />
@@ -1257,10 +1862,28 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
                               }}
                             />
                           ) : null}
+                          {activeBoundGoldPoint ? (
+                            <div
+                              className="homework-card-weekly-gold-bound-cursor"
+                              style={{
+                                left: `${(activeBoundGoldPoint.x / goldLineWidth) * 100}%`,
+                                top: `${(activeBoundGoldPoint.y / goldLineHeight) * 100}%`,
+                              }}
+                            />
+                          ) : null}
                           {isGoldChartHover ? (
-                            <div className="homework-card-weekly-gold-overlay" style={{ left: `${activeGoldLeftPct}%` }}>
+                          <div className={`homework-card-weekly-gold-overlay ${goldOverlayEdgeClass}`} style={{ left: `${activeGoldLeftPct}%` }}>
                               <span>{getWeekRangeLabel(activeWeekOffset)}</span>
-                              <strong>{activeGold.toLocaleString()} G</strong>
+                              <div className="homework-card-weekly-gold-overlay-values">
+                                <div className="homework-card-weekly-gold-overlay-row">
+                                  <span>골드</span>
+                                  <strong>{activeGold.toLocaleString()} G</strong>
+                                </div>
+                                <div className="homework-card-weekly-gold-overlay-row">
+                                  <span>귀속골</span>
+                                  <strong className="is-bound">{activeBoundGold.toLocaleString()}</strong>
+                                </div>
+                              </div>
                             </div>
                           ) : null}
                         </div>
@@ -1273,7 +1896,7 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
                               key={idx}
                               type="button"
                               className={`homework-card-weekly-gold-label-btn ${activeWeekOffset === weekOffset ? 'is-active' : ''}`}
-                              title={`${getWeekRangeLabel(weekOffset)}: ${value.toLocaleString()} G`}
+                              title={`${getWeekRangeLabel(weekOffset)}: 골드 ${value.toLocaleString()} G / 귀속골 ${(weeklyBoundGoldSeries[idx] ?? 0).toLocaleString()}`}
                               onMouseEnter={() => setActiveWeekOffset(weekOffset)}
                             >
                               <span className="homework-card-weekly-gold-label">
@@ -1306,13 +1929,19 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
                               <span
                                 key={idx}
                                 className={`homework-card-weekly-mini-bar is-weekly ${activeWeekOffset === weekOffset ? 'is-active' : ''}`}
-                                  style={{ height: `${Math.max(5, (value / 100) * 22)}px` }}
-                                title={`${getWeekRangeLabel(weekOffset)}: ${value}%`}
-                                onMouseEnter={() => setActiveWeekOffset(weekOffset)}
+                                style={{ height: `${Math.max(5, (value / 100) * 22)}px` }}
+                                onMouseEnter={() => { setActiveWeekOffset(weekOffset); setHoveredRateType('weekly') }}
+                                onMouseLeave={() => setHoveredRateType(null)}
                               />
                             )
                           })}
                         </div>
+                        {hoveredRateType === 'weekly' && (
+                          <div className="homework-card-weekly-inline-readout">
+                            <span>완료: {activeWeeklyTasks.done.length ? activeWeeklyTasks.done.join(', ') : '-'}</span>
+                            <span>미완료: {activeWeeklyTasks.miss.length ? activeWeeklyTasks.miss.join(', ') : '-'}</span>
+                          </div>
+                        )}
                       </div>
                       <div className="homework-card-weekly-rate-card">
                         <div className="homework-card-weekly-rate-head">
@@ -1329,22 +1958,20 @@ function HomeworkCardFlipWrapper({ isFlipped, chartData, cardLabel, characterCla
                               <span
                                 key={idx}
                                 className={`homework-card-weekly-mini-bar is-raid ${activeWeekOffset === weekOffset ? 'is-active' : ''}`}
-                                  style={{ height: `${Math.max(5, (value / 100) * 22)}px` }}
-                                title={`${getWeekRangeLabel(weekOffset)}: ${value}%`}
-                                onMouseEnter={() => setActiveWeekOffset(weekOffset)}
+                                style={{ height: `${Math.max(5, (value / 100) * 22)}px` }}
+                                onMouseEnter={() => { setActiveWeekOffset(weekOffset); setHoveredRateType('raid') }}
+                                onMouseLeave={() => setHoveredRateType(null)}
                               />
                             )
                           })}
                         </div>
+                        {hoveredRateType === 'raid' && (
+                          <div className="homework-card-weekly-inline-readout">
+                            <span>완료: {activeRaidTasks.done.length ? activeRaidTasks.done.join(', ') : '-'}</span>
+                            <span>미완료: {activeRaidTasks.miss.length ? activeRaidTasks.miss.join(', ') : '-'}</span>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    <div className="homework-card-graph-task-readout">
-                      <span>주간 완료: {activeWeeklyTasks.done.length ? activeWeeklyTasks.done.join(', ') : '-'}</span>
-                      <span>주간 미완료: {activeWeeklyTasks.miss.length ? activeWeeklyTasks.miss.join(', ') : '-'}</span>
-                    </div>
-                    <div className="homework-card-graph-task-readout">
-                      <span>레이드 완료: {activeRaidTasks.done.length ? activeRaidTasks.done.join(', ') : '-'}</span>
-                      <span>레이드 미완료: {activeRaidTasks.miss.length ? activeRaidTasks.miss.join(', ') : '-'}</span>
                     </div>
                   </div>
                   </>
@@ -1369,8 +1996,13 @@ function ExpeditionHomeworkCard({ expId, today, weekKey, onRemove, onComplete, o
   const [weeklyChecked, setWeeklyChecked] = useState(() =>
     loadChecked(expStorageKeyWeekly(expId), expStorageKeyWeeklyMeta(expId), weekKey) ?? new Set()
   )
-  const [dailyModalOpen, setDailyModalOpen] = useState(false)
-  const [weeklyModalOpen, setWeeklyModalOpen] = useState(false)
+  const [dailySlots, setDailySlots] = useState(() =>
+    loadExpeditionSlots(EXPEDITION_DAILY_SLOTS_KEY_PREFIX, expId, DAILY_ITEMS.map((x) => x.id))
+  )
+  const [weeklySlots, setWeeklySlots] = useState(() =>
+    loadExpeditionSlots(EXPEDITION_WEEKLY_SLOTS_KEY_PREFIX, expId, WEEKLY_ITEMS.map((x) => x.id))
+  )
+  const [editModalOpen, setEditModalOpen] = useState(false)
 
   useEffect(() => {
     const loaded = loadChecked(expStorageKeyDaily(expId), expStorageKeyDailyMeta(expId), today)
@@ -1403,8 +2035,10 @@ function ExpeditionHomeworkCard({ expId, today, weekKey, onRemove, onComplete, o
     persistWeekly(weeklyChecked.has(id) ? new Set([...weeklyChecked].filter((x) => x !== id)) : new Set([...weeklyChecked, id]))
   }
 
-  const dailyRatio = DAILY_ITEMS.length ? dailyChecked.size / DAILY_ITEMS.length : 0
-  const weeklyRatio = WEEKLY_ITEMS.length ? weeklyChecked.size / WEEKLY_ITEMS.length : 0
+  const dailyDone = dailySlots.filter((id) => dailyChecked.has(id)).length
+  const weeklyDone = weeklySlots.filter((id) => weeklyChecked.has(id)).length
+  const dailyRatio = dailySlots.length ? dailyDone / dailySlots.length : 1
+  const weeklyRatio = weeklySlots.length ? weeklyDone / weeklySlots.length : 1
   const dailyWeekly100 = dailyRatio >= 1 && weeklyRatio >= 1
   const isCompact = variant === 'compact'
 
@@ -1423,8 +2057,13 @@ function ExpeditionHomeworkCard({ expId, today, weekKey, onRemove, onComplete, o
     persistWeekly(new Set())
   }
   const handleCheckAllDailyWeekly = () => {
-    persistDaily(new Set(DAILY_ITEMS.map((item) => item.id)))
-    persistWeekly(new Set(WEEKLY_ITEMS.map((item) => item.id)))
+    persistDaily(new Set(dailySlots))
+    persistWeekly(new Set(weeklySlots))
+    // 사용자가 "전체 체크" 버튼으로 100%를 만들 때는 완료 오버레이를 항상 다시 보여준다.
+    if (onComplete) {
+      prevAllCompleteRef.current = true
+      onComplete(expId, wrapRef.current)
+    }
   }
 
   return (
@@ -1433,40 +2072,47 @@ function ExpeditionHomeworkCard({ expId, today, weekKey, onRemove, onComplete, o
           <div className={isAnimatingComplete ? 'homework-char-card-dimmed' : ''}>
           {isCompact ? (
             <div className="homework-char-row-compact">
-              <div className="homework-char-compact-left">
+              <div className="homework-char-row-compact-top">
+                <div className="homework-char-compact-left">
                 <span className="homework-expedition-icon" aria-hidden>원정대</span>
                 <div className="homework-char-name-wrap">
                   <span className="homework-char-title">원정대</span>
                   {expeditionLevelValue != null && <span className="homework-char-level">{`원정대 Lv.${expeditionLevelValue}`}</span>}
                 </div>
               </div>
-              <div className="homework-char-compact-buttons" aria-label="원정대 숙제 체크">
-                {DAILY_ITEMS.map((item) => (
-                  <button
-                    key={`exp-d-${item.id}`}
-                    type="button"
-                    className={`homework-btn-chip ${dailyChecked.has(item.id) ? 'is-checked' : ''}`}
-                    onClick={() => toggleDaily(item.id)}
-                    aria-pressed={dailyChecked.has(item.id)}
-                    aria-label={`일일 ${item.label}`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-                {WEEKLY_ITEMS.map((item) => (
-                  <button
-                    key={`exp-w-${item.id}`}
-                    type="button"
-                    className={`homework-btn-chip ${weeklyChecked.has(item.id) ? 'is-checked' : ''}`}
-                    onClick={() => toggleWeekly(item.id)}
-                    aria-pressed={weeklyChecked.has(item.id)}
-                    aria-label={`주간 ${item.label}`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-              <div className="homework-char-compact-actions">
+                <div className="homework-char-compact-actions">
+                <div className="homework-char-compact-progress" aria-hidden title={`일일 ${dailyDone}/${dailySlots.length} · 주간 ${weeklyDone}/${weeklySlots.length}`}>
+                  {(() => {
+                    const r = 14
+                    const cx = 18
+                    const cy = 18
+                    const circumference = 2 * Math.PI * r
+                    const halfCirc = circumference / 2
+                    const ringStroke = 5
+                    const dailyDash = dailyRatio * halfCirc
+                    const weeklyDash = weeklyRatio * halfCirc
+                    return (
+                      <div className={`homework-progress-ring homework-progress-ring-dailyweekly ${dailyWeekly100 ? 'is-complete' : ''}`}>
+                        <svg viewBox="0 0 36 36">
+                          <circle className="homework-progress-ring-bg" cx={cx} cy={cy} r={r} />
+                          <circle className="homework-progress-fill homework-progress-fill-daily" cx={cx} cy={cy} r={r} fill="none" strokeWidth={ringStroke} strokeDasharray={`${dailyDash} ${circumference - dailyDash}`} strokeDashoffset={-halfCirc} transform={`rotate(-90 ${cx} ${cy})`} />
+                          <circle className="homework-progress-fill homework-progress-fill-weekly" cx={cx} cy={cy} r={r} fill="none" strokeWidth={ringStroke} strokeDasharray={`${weeklyDash} ${circumference - weeklyDash}`} strokeDashoffset={0} transform={`rotate(-90 ${cx} ${cy})`} />
+                          <circle className="homework-progress-ring-edge homework-progress-edge-daily" cx={cx} cy={cy} r={r} fill="none" strokeWidth={2} strokeDasharray={`${halfCirc} ${circumference}`} strokeDashoffset={-halfCirc} transform={`rotate(-90 ${cx} ${cy})`} />
+                          <circle className="homework-progress-ring-edge homework-progress-edge-weekly" cx={cx} cy={cy} r={r} fill="none" strokeWidth={2} strokeDasharray={`${halfCirc} ${circumference}`} strokeDashoffset={0} transform={`rotate(-90 ${cx} ${cy})`} />
+                        </svg>
+                      </div>
+                    )
+                  })()}
+                </div>
+                <button
+                  type="button"
+                  className="homework-btn-icon homework-btn-checkall"
+                  onClick={handleCheckAllDailyWeekly}
+                  title="일일·주간 숙제 전체 체크"
+                  aria-label="일일·주간 숙제 전체 체크"
+                >
+                  <IconCheck />
+                </button>
                 <button
                   type="button"
                   className="homework-btn-icon homework-btn-quick"
@@ -1478,18 +2124,53 @@ function ExpeditionHomeworkCard({ expId, today, weekKey, onRemove, onComplete, o
                 </button>
                 <button
                   type="button"
-                  className="homework-btn-icon homework-btn-checkall"
-                  onClick={handleCheckAllDailyWeekly}
-                  title="일일·주간 숙제 전체 체크"
-                  aria-label="일일·주간 숙제 전체 체크"
+                  className="homework-btn-icon homework-btn-edit"
+                  onClick={() => setEditModalOpen(true)}
+                  title="편집"
+                  aria-label="편집"
                 >
-                  <IconCheck />
+                  <IconEdit />
                 </button>
                 {onRemove && (
                   <button type="button" className="homework-btn-icon homework-btn-remove" onClick={() => onRemove(expId)} title="삭제" aria-label="삭제">
                     <IconTrash />
                   </button>
                 )}
+              </div>
+              </div>
+              <div className="homework-char-row-compact-bottom">
+                <div className="homework-char-compact-buttons" aria-label="원정대 숙제 체크">
+                  {dailySlots
+                    .map((id) => DAILY_ITEMS.find((x) => x.id === id))
+                    .filter(Boolean)
+                    .map((item) => (
+                      <button
+                        key={`exp-d-${item.id}`}
+                        type="button"
+                        className={`homework-btn-chip homework-chip-daily ${dailyChecked.has(item.id) ? 'is-checked' : ''}`}
+                        onClick={() => toggleDaily(item.id)}
+                        aria-pressed={dailyChecked.has(item.id)}
+                        aria-label={`일일 ${item.label}`}
+                      >
+                        {compactTaskLabel(item.label, 'daily')}
+                      </button>
+                    ))}
+                  {weeklySlots
+                    .map((id) => WEEKLY_ITEMS.find((x) => x.id === id))
+                    .filter(Boolean)
+                    .map((item) => (
+                      <button
+                        key={`exp-w-${item.id}`}
+                        type="button"
+                        className={`homework-btn-chip homework-chip-weekly ${weeklyChecked.has(item.id) ? 'is-checked' : ''}`}
+                        onClick={() => toggleWeekly(item.id)}
+                        aria-pressed={weeklyChecked.has(item.id)}
+                        aria-label={`주간 ${item.label}`}
+                      >
+                        {compactTaskLabel(item.label, 'weekly')}
+                      </button>
+                    ))}
+                </div>
               </div>
             </div>
           ) : (
@@ -1544,6 +2225,15 @@ function ExpeditionHomeworkCard({ expId, today, weekKey, onRemove, onComplete, o
                 >
                   <IconReset />
                 </button>
+                <button
+                  type="button"
+                  className="homework-btn-icon homework-btn-edit"
+                  onClick={() => setEditModalOpen(true)}
+                  title="편집"
+                  aria-label="편집"
+                >
+                  <IconEdit />
+                </button>
                 {onOpenGraph && (
                   <button type="button" className="homework-btn-icon homework-btn-graph" onClick={onOpenGraph} title="그래프 보기" aria-label="그래프 보기">
                     <IconGraph />
@@ -1563,17 +2253,12 @@ function ExpeditionHomeworkCard({ expId, today, weekKey, onRemove, onComplete, o
             <div className="homework-char-section homework-char-section-compact homework-section-daily">
               <div className="homework-char-section-head">
                 <CardDescription>일일 숙제</CardDescription>
-                <div className="homework-raid-actions">
-                  <button type="button" className="homework-btn-icon homework-btn-edit" onClick={() => setDailyModalOpen(true)} title="일일 숙제 편집" aria-label="일일 숙제 편집">
-                    <IconEdit />
-                  </button>
-                  <button type="button" className="homework-btn-icon homework-btn-reset" onClick={() => persistDaily(new Set())} title="초기화" aria-label="초기화">
-                    <IconReset />
-                  </button>
-                </div>
               </div>
               <div className="homework-btns">
-                {DAILY_ITEMS.map((item) => (
+                {dailySlots
+                  .map((id) => DAILY_ITEMS.find((x) => x.id === id))
+                  .filter(Boolean)
+                  .map((item) => (
                   <button
                     key={item.id}
                     type="button"
@@ -1590,17 +2275,12 @@ function ExpeditionHomeworkCard({ expId, today, weekKey, onRemove, onComplete, o
             <div className="homework-char-section homework-char-section-compact homework-section-weekly">
               <div className="homework-char-section-head">
                 <CardDescription>주간 숙제</CardDescription>
-                <div className="homework-raid-actions">
-                  <button type="button" className="homework-btn-icon homework-btn-edit" onClick={() => setWeeklyModalOpen(true)} title="주간 숙제 편집" aria-label="주간 숙제 편집">
-                    <IconEdit />
-                  </button>
-                  <button type="button" className="homework-btn-icon homework-btn-reset" onClick={() => persistWeekly(new Set())} title="초기화" aria-label="초기화">
-                    <IconReset />
-                  </button>
-                </div>
               </div>
               <div className="homework-btns">
-                {WEEKLY_ITEMS.map((item) => (
+                {weeklySlots
+                  .map((id) => WEEKLY_ITEMS.find((x) => x.id === id))
+                  .filter(Boolean)
+                  .map((item) => (
                   <button
                     key={item.id}
                     type="button"
@@ -1630,25 +2310,28 @@ function ExpeditionHomeworkCard({ expId, today, weekKey, onRemove, onComplete, o
         </div>
       )}
         </Card>
-      {dailyModalOpen && (
-        <DailyEditModal
-          checkedIds={dailyChecked}
-          onSave={(next) => { persistDaily(next); setDailyModalOpen(false); }}
-          onClose={() => setDailyModalOpen(false)}
-        />
-      )}
-      {weeklyModalOpen && (
-        <WeeklyEditModal
-          checkedIds={weeklyChecked}
-          onSave={(next) => { persistWeekly(next); setWeeklyModalOpen(false); }}
-          onClose={() => setWeeklyModalOpen(false)}
-        />
+      {editModalOpen && typeof document !== 'undefined' && createPortal(
+        <ExpeditionEditModal
+          dailyChecked={dailySlots}
+          weeklyChecked={weeklySlots}
+          onSave={(nextDaily, nextWeekly) => {
+            const dailyIds = DAILY_ITEMS.filter((x) => nextDaily.has(x.id)).map((x) => x.id)
+            const weeklyIds = WEEKLY_ITEMS.filter((x) => nextWeekly.has(x.id)).map((x) => x.id)
+            setDailySlots(dailyIds)
+            setWeeklySlots(weeklyIds)
+            saveExpeditionSlots(EXPEDITION_DAILY_SLOTS_KEY_PREFIX, expId, dailyIds)
+            saveExpeditionSlots(EXPEDITION_WEEKLY_SLOTS_KEY_PREFIX, expId, weeklyIds)
+            setEditModalOpen(false)
+          }}
+          onClose={() => setEditModalOpen(false)}
+        />,
+        document.body
       )}
     </div>
   )
 }
 
-function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete, onIncomplete, onDismissComplete, isAnimatingComplete, variant = 'detailed', onOpenGraph }) {
+function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete, onIncomplete, onDismissComplete, isAnimatingComplete, variant = 'detailed', onOpenGraph, onShowToast }) {
   const charKey = getCharKey(character)
   const name = character?.CharacterName ?? '알 수 없음'
   const prevAllCompleteRef = useRef(false)
@@ -1662,12 +2345,15 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
   const [weeklyChecked, setWeeklyChecked] = useState(() =>
     loadChecked(storageKeyWeekly(charKey), storageKeyWeeklyMeta(charKey), weekKey) ?? new Set()
   )
+  const [weeklySlots, setWeeklySlots] = useState(() => loadWeeklySlots(charKey))
   const [raidModes, setRaidModes] = useState(() => loadRaidModes(charKey, weekKey))
   const [raidChecked, setRaidChecked] = useState(() => loadChecked(storageKeyRaidChecked(charKey), storageKeyRaidCheckedMeta(charKey), weekKey) ?? new Set())
   const [raidBusFees, setRaidBusFees] = useState(() => loadRaidBusFees(charKey, weekKey))
   const [raidBusRoles, setRaidBusRoles] = useState(() => loadRaidBusRoles(charKey, weekKey))
   const [raidSlots, setRaidSlots] = useState(() => loadRaidSlots(charKey, itemLevel))
-  const [raidModalOpen, setRaidModalOpen] = useState(false)
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const raidItemById = useMemo(() => new Map(RAID_ITEMS.map((it) => [it.id, it])), [])
+  const didSanitizeBusTagRef = useRef(false)
 
   useEffect(() => {
     const loaded = loadChecked(storageKeyDaily(charKey), storageKeyDailyMeta(charKey), today)
@@ -1678,20 +2364,72 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
     setWeeklyChecked(loaded ?? new Set())
   }, [charKey, weekKey])
   useEffect(() => {
-    setRaidModes(loadRaidModes(charKey, weekKey))
+    setWeeklySlots(loadWeeklySlots(charKey))
+  }, [charKey])
+  useEffect(() => {
+    const loaded = loadRaidModes(charKey, weekKey)
+    const alias = { 'behemoth-normal': 'behemoth-n' }
+    const next = {}
+    for (const [id, mode] of Object.entries(loaded ?? {})) next[alias[id] ?? id] = mode
+    setRaidModes(next)
   }, [charKey, weekKey])
   useEffect(() => {
     const loaded = loadChecked(storageKeyRaidChecked(charKey), storageKeyRaidCheckedMeta(charKey), weekKey)
-    setRaidChecked(loaded ?? new Set())
+    const alias = { 'behemoth-normal': 'behemoth-n' }
+    const mapped = loaded
+      ? new Set(Array.from(loaded).map((id) => alias[id] ?? id))
+      : new Set()
+    setRaidChecked(mapped)
   }, [charKey, weekKey])
   useEffect(() => {
-    setRaidBusFees(loadRaidBusFees(charKey, weekKey))
+    const loaded = loadRaidBusFees(charKey, weekKey)
+    const alias = { 'behemoth-normal': 'behemoth-n' }
+    const next = {}
+    for (const [id, v] of Object.entries(loaded ?? {})) next[alias[id] ?? id] = v
+    setRaidBusFees(next)
+  }, [charKey, weekKey])
+  // (이전 버전에서) "버스 태그"가 강제로 켜지던 케이스를 완화:
+  // 세르카처럼 싱글/버스 모두 가능한 레이드는, 버스비가 비어있으면 UI에서는 싱글로 취급.
+  useEffect(() => {
+    if (didSanitizeBusTagRef.current) return
+    const next = { ...raidModes }
+    let changed = false
+    for (const [id, mode] of Object.entries(next)) {
+      const meta = raidItemById.get(id)
+      if (!meta) continue
+      if (mode === 'bus' && meta.difficulty !== 'single') {
+        const fee = raidBusFees[id]
+        if (fee == null || fee === '') {
+          next[id] = 'single'
+          changed = true
+        }
+      }
+    }
+    if (changed) {
+      setRaidModes(next)
+      saveRaidModes(charKey, weekKey, next)
+    }
+    didSanitizeBusTagRef.current = true
+  }, [raidBusFees])
+  useEffect(() => {
+    didSanitizeBusTagRef.current = false
   }, [charKey, weekKey])
   useEffect(() => {
-    setRaidBusRoles(loadRaidBusRoles(charKey, weekKey))
+    const loaded = loadRaidBusRoles(charKey, weekKey)
+    const alias = { 'behemoth-normal': 'behemoth-n' }
+    const next = {}
+    for (const [id, v] of Object.entries(loaded ?? {})) next[alias[id] ?? id] = v
+    setRaidBusRoles(next)
   }, [charKey, weekKey])
   useEffect(() => {
-    setRaidSlots(loadRaidSlots(charKey, itemLevel))
+    const loaded = loadRaidSlots(charKey, itemLevel)
+    const byGroup = new Map()
+    for (const id of loaded) {
+      const meta = raidItemById.get(id)
+      const groupKey = meta?.groupKey ?? meta?.id ?? id
+      byGroup.set(groupKey, id)
+    }
+    setRaidSlots([...byGroup.values()])
   }, [charKey, itemLevel])
 
   const persistDaily = useCallback(
@@ -1746,19 +2484,65 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
   )
 
   const [busFeeAttentionId, setBusFeeAttentionId] = useState(null)
+  const busAutoCheckTimersRef = useRef({})
+  const showCardToast = useCallback((message) => {
+    onShowToast?.(message)
+  }, [onShowToast])
   const triggerBusFeeAttention = useCallback((raidId) => {
     setBusFeeAttentionId(raidId)
     setTimeout(() => setBusFeeAttentionId((prev) => (prev === raidId ? null : prev)), 420)
   }, [])
+  const clearBusAutoCheckTimer = useCallback((raidId) => {
+    const timers = busAutoCheckTimersRef.current
+    if (timers[raidId] != null) {
+      clearTimeout(timers[raidId])
+      delete timers[raidId]
+    }
+  }, [])
+  const scheduleBusAutoCheck = useCallback((raidId, rawValue) => {
+    clearBusAutoCheckTimer(raidId)
+    const digits = String(rawValue ?? '').replace(/[^\d]/g, '')
+    const timers = busAutoCheckTimersRef.current
+    timers[raidId] = setTimeout(() => {
+      delete timers[raidId]
+      if (digits === '') {
+        persistRaidChecked(new Set([...raidChecked].filter((x) => x !== raidId)))
+        return
+      }
+      const n = Number(digits)
+      const isValid = Number.isFinite(n) && n >= 0
+      if (isValid) {
+        persistRaidChecked(new Set([...raidChecked, raidId]))
+        setBusFeeAttentionId((prev) => (prev === raidId ? null : prev))
+      }
+    }, 2000)
+  }, [clearBusAutoCheckTimer, persistRaidChecked, raidChecked])
+  const getDefaultRaidMode = (raidId) => {
+    return 'single'
+  }
+  const isCompact = variant === 'compact'
+  const hasValidBusFee = (id) => {
+    const v = raidBusFees[id]
+    if (v == null || v === '') return false
+    const n = Number(String(v).replace(/,/g, '').trim())
+    return Number.isFinite(n)
+  }
   const toggleRaid = (id) => {
     const isAlreadyChecked = raidChecked.has(id)
-    const mode = raidModes[id]
+    const effectiveMode = raidModes[id] ?? getDefaultRaidMode(id)
     if (isAlreadyChecked) {
       persistRaidChecked(new Set([...raidChecked].filter((x) => x !== id)))
       return
     }
-    if (mode === 'bus' && !hasValidBusFee(id)) {
+    if (effectiveMode === 'bus' && !hasValidBusFee(id)) {
+      // compact(간략)에서는 버스비 입력 UI가 없어서 체크 자체가 불가능해짐.
+      // detailed(자세히)에서는 기존처럼 입력 유도(빨간 강조)를 유지한다.
+      if (isCompact) {
+        persistRaidChecked(new Set([...raidChecked, id]))
+        return
+      }
       triggerBusFeeAttention(id)
+      showCardToast('버스비를 입력해 주세요.')
       return
     }
     persistRaidChecked(new Set([...raidChecked, id]))
@@ -1770,19 +2554,16 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
     persistWeekly(weeklyChecked.has(id) ? new Set([...weeklyChecked].filter((x) => x !== id)) : new Set([...weeklyChecked, id]))
 
   const dailyRatio = DAILY_ITEMS.length ? dailyChecked.size / DAILY_ITEMS.length : 0
-  const weeklyRatio = WEEKLY_ITEMS.length ? weeklyChecked.size / WEEKLY_ITEMS.length : 0
-  const hasValidBusFee = (id) => {
-    const v = raidBusFees[id]
-    if (v == null || v === '') return false
-    const n = Number(String(v).replace(/,/g, '').trim())
-    return Number.isFinite(n)
-  }
-  const raidDone = raidSlots.filter((id) => raidChecked.has(id) || (raidModes[id] === 'bus' && hasValidBusFee(id))).length
-  const raidRatio = raidSlots.length ? raidDone / raidSlots.length : 0
+  const weeklyDone = weeklySlots.filter((id) => weeklyChecked.has(id)).length
+  const weeklyRatio = weeklySlots.length ? weeklyDone / weeklySlots.length : 1
+  const raidDone = raidSlots.filter((id) => {
+    const effectiveMode = raidModes[id] ?? getDefaultRaidMode(id)
+    return raidChecked.has(id)
+  }).length
+  const raidRatio = raidSlots.length ? raidDone / raidSlots.length : 1
   const dailyWeekly100 = dailyRatio >= 1 && weeklyRatio >= 1
   const raid100 = raidRatio >= 1
   const allComplete = dailyWeekly100 && raid100
-  const isCompact = variant === 'compact'
 
   useEffect(() => {
     if (allComplete && !prevAllCompleteRef.current && onComplete) {
@@ -1806,8 +2587,13 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
   }
   const handleCheckAllHomework = () => {
     persistDaily(new Set(DAILY_ITEMS.map((item) => item.id)))
-    persistWeekly(new Set(WEEKLY_ITEMS.map((item) => item.id)))
+    persistWeekly(new Set(weeklySlots))
     persistRaidChecked(new Set(raidSlots))
+    // 사용자가 상단 "모든 숙제 100%" 버튼을 누르면 완료 오버레이를 재표시한다.
+    if (onComplete) {
+      prevAllCompleteRef.current = true
+      onComplete(character, wrapRef.current)
+    }
   }
 
   return (
@@ -1821,6 +2607,7 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
       <div className={isAnimatingComplete ? 'homework-char-card-dimmed' : ''}>
       {isCompact ? (
         <div className="homework-char-row-compact">
+          <div className="homework-char-row-compact-top">
           <div className="homework-char-compact-left">
             <ClassIcon className={className} size={24} />
             <div className="homework-char-name-wrap">
@@ -1828,52 +2615,48 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
               <span className="homework-char-level">{itemLevel != null ? itemLevel : '-'}</span>
             </div>
           </div>
-          <div className="homework-char-compact-buttons" aria-label="숙제 체크">
-            {DAILY_ITEMS.map((item) => (
-              <button
-                key={`d-${item.id}`}
-                type="button"
-                className={`homework-btn-chip ${dailyChecked.has(item.id) ? 'is-checked' : ''}`}
-                onClick={() => toggleDaily(item.id)}
-                aria-pressed={dailyChecked.has(item.id)}
-                aria-label={`일일 ${item.label}`}
-              >
-                {item.label}
-              </button>
-            ))}
-            {WEEKLY_ITEMS.map((item) => (
-              <button
-                key={`w-${item.id}`}
-                type="button"
-                className={`homework-btn-chip ${weeklyChecked.has(item.id) ? 'is-checked' : ''}`}
-                onClick={() => toggleWeekly(item.id)}
-                aria-pressed={weeklyChecked.has(item.id)}
-                aria-label={`주간 ${item.label}`}
-              >
-                {item.label}
-              </button>
-            ))}
-            {raidSlots
-              .map((id) => RAID_ITEMS.find((r) => r.id === id))
-              .filter(Boolean)
-              .map((item) => {
-                const mode = raidModes[item.id]
-                const isChecked = raidChecked.has(item.id) || (mode === 'bus' && hasValidBusFee(item.id))
-                return (
-                  <button
-                    key={`r-${item.id}`}
-                    type="button"
-                    className={`homework-btn-chip ${isChecked ? 'is-checked' : ''}`}
-                    onClick={() => toggleRaid(item.id)}
-                    aria-pressed={isChecked}
-                    aria-label={`레이드 ${item.label}`}
-                  >
-                    {item.label}
-                  </button>
-                )
-              })}
-          </div>
           <div className="homework-char-compact-actions">
+            <div className="homework-char-compact-progress" aria-hidden title={`일일 ${dailyChecked.size}/${DAILY_ITEMS.length} · 주간 ${weeklyDone}/${weeklySlots.length} · 레이드 ${raidDone}/${raidSlots.length}`}>
+              {(() => {
+                const r = 14
+                const cx = 18
+                const cy = 18
+                const circumference = 2 * Math.PI * r
+                const halfCirc = circumference / 2
+                const ringStroke = 5
+                const dailyDash = dailyRatio * halfCirc
+                const weeklyDash = weeklyRatio * halfCirc
+                const raidDash = Math.min(raidRatio * circumference, circumference - 0.01)
+                return (
+                  <>
+                    <div className={`homework-progress-ring homework-progress-ring-dailyweekly ${dailyWeekly100 ? 'is-complete' : ''}`}>
+                      <svg viewBox="0 0 36 36">
+                        <circle className="homework-progress-ring-bg" cx={cx} cy={cy} r={r} />
+                        <circle className="homework-progress-fill homework-progress-fill-daily" cx={cx} cy={cy} r={r} fill="none" strokeWidth={ringStroke} strokeDasharray={`${dailyDash} ${circumference - dailyDash}`} strokeDashoffset={-halfCirc} transform={`rotate(-90 ${cx} ${cy})`} />
+                        <circle className="homework-progress-fill homework-progress-fill-weekly" cx={cx} cy={cy} r={r} fill="none" strokeWidth={ringStroke} strokeDasharray={`${weeklyDash} ${circumference - weeklyDash}`} strokeDashoffset={0} transform={`rotate(-90 ${cx} ${cy})`} />
+                        <circle className="homework-progress-ring-edge homework-progress-edge-daily" cx={cx} cy={cy} r={r} fill="none" strokeWidth={2} strokeDasharray={`${halfCirc} ${circumference}`} strokeDashoffset={-halfCirc} transform={`rotate(-90 ${cx} ${cy})`} />
+                        <circle className="homework-progress-ring-edge homework-progress-edge-weekly" cx={cx} cy={cy} r={r} fill="none" strokeWidth={2} strokeDasharray={`${halfCirc} ${circumference}`} strokeDashoffset={0} transform={`rotate(-90 ${cx} ${cy})`} />
+                      </svg>
+                    </div>
+                    <div className={`homework-progress-ring homework-progress-ring-raid ${raid100 ? 'is-complete' : ''}`}>
+                      <svg viewBox="0 0 36 36">
+                        <circle className="homework-progress-ring-bg" cx={cx} cy={cy} r={r} />
+                        <circle className="homework-progress-fill homework-progress-fill-raid" cx={cx} cy={cy} r={r} fill="none" strokeWidth={ringStroke} strokeDasharray={`${raidDash} ${circumference - raidDash}`} strokeDashoffset={0} transform={`rotate(-90 ${cx} ${cy})`} />
+                      </svg>
+                    </div>
+                  </>
+                )
+              })()}
+            </div>
+            <button
+              type="button"
+              className="homework-btn-icon homework-btn-checkall"
+              onClick={handleCheckAllHomework}
+              title="모든 숙제 전체 체크"
+              aria-label="모든 숙제 전체 체크"
+            >
+              <IconCheck />
+            </button>
             <button
               type="button"
               className="homework-btn-icon homework-btn-quick"
@@ -1885,18 +2668,86 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
             </button>
             <button
               type="button"
-              className="homework-btn-icon homework-btn-checkall"
-              onClick={handleCheckAllHomework}
-              title="모든 숙제 전체 체크"
-              aria-label="모든 숙제 전체 체크"
+              className="homework-btn-icon homework-btn-edit"
+              onClick={() => setEditModalOpen(true)}
+              title="편집"
+              aria-label="편집"
             >
-              <IconCheck />
+              <IconEdit />
             </button>
             {onRemove && (
               <button type="button" className="homework-btn-icon homework-btn-remove" onClick={() => onRemove(character)} title="삭제" aria-label="삭제">
                 <IconTrash />
               </button>
             )}
+          </div>
+          </div>
+          <div className="homework-char-row-compact-bottom">
+            <div className="homework-char-compact-buttons" aria-label="숙제 체크">
+              {DAILY_ITEMS.map((item) => (
+                <button
+                  key={`d-${item.id}`}
+                  type="button"
+                  className={`homework-btn-chip homework-chip-daily ${dailyChecked.has(item.id) ? 'is-checked' : ''}`}
+                  onClick={() => toggleDaily(item.id)}
+                  aria-pressed={dailyChecked.has(item.id)}
+                  aria-label={`일일 ${item.label}`}
+                >
+                  {compactTaskLabel(item.label, 'daily')}
+                </button>
+              ))}
+              {weeklySlots
+                .map((id) => WEEKLY_ITEMS.find((x) => x.id === id))
+                .filter(Boolean)
+                .map((item) => (
+                  <button
+                    key={`w-${item.id}`}
+                    type="button"
+                    className={`homework-btn-chip homework-chip-weekly ${weeklyChecked.has(item.id) ? 'is-checked' : ''}`}
+                    onClick={() => toggleWeekly(item.id)}
+                    aria-pressed={weeklyChecked.has(item.id)}
+                    aria-label={`주간 ${item.label}`}
+                  >
+                    {compactTaskLabel(item.label, 'weekly')}
+                  </button>
+                ))}
+              {raidSlots
+                .map((id) => RAID_ITEMS.find((r) => r.id === id))
+                .filter(Boolean)
+                .map((item) => {
+                  const defaultMode = 'single'
+                  const effectiveMode = raidModes[item.id] ?? defaultMode
+                  const isChecked = raidChecked.has(item.id)
+                  const difficultyCompact =
+                    item.difficulty === 'single'
+                      ? '싱글'
+                      : item.difficulty === 'stage1'
+                        ? '1단'
+                        : item.difficulty === 'stage2'
+                          ? '2단'
+                          : item.difficulty === 'stage3'
+                            ? '3단'
+                            : item.difficulty === 'nightmare'
+                              ? '나메'
+                              : item.difficulty === 'hard'
+                                ? '하드'
+                                : '노말'
+                  const busSuffix = effectiveMode === 'bus' ? ' 버스' : ''
+                  const chipText = `${compactTaskLabel(item.label, 'raid')} ${difficultyCompact}${busSuffix}`
+                  return (
+                    <button
+                      key={`r-${item.id}`}
+                      type="button"
+                      className={`homework-btn-chip homework-chip-raid ${isChecked ? 'is-checked' : ''}`}
+                      onClick={() => toggleRaid(item.id)}
+                      aria-pressed={isChecked}
+                      aria-label={`레이드 ${item.label}`}
+                    >
+                      {chipText}
+                    </button>
+                  )
+                })}
+            </div>
           </div>
         </div>
       ) : (
@@ -1960,6 +2811,15 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
             >
               <IconReset />
             </button>
+            <button
+              type="button"
+              className="homework-btn-icon homework-btn-edit"
+              onClick={() => setEditModalOpen(true)}
+              title="편집"
+              aria-label="편집"
+            >
+              <IconEdit />
+            </button>
             {onOpenGraph && (
               <button
                 type="button"
@@ -1985,9 +2845,6 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
         <div className="homework-char-section homework-char-section-compact homework-section-daily">
           <div className="homework-char-section-head">
             <CardDescription>일일 숙제</CardDescription>
-            <button type="button" className="homework-btn-icon homework-btn-reset" onClick={() => persistDaily(new Set())} title="초기화" aria-label="초기화">
-              <IconReset />
-            </button>
           </div>
           <div className="homework-btns">
             {DAILY_ITEMS.map((item) => (
@@ -2007,12 +2864,12 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
         <div className="homework-char-section homework-char-section-compact homework-section-weekly">
           <div className="homework-char-section-head">
             <CardDescription>주간 숙제</CardDescription>
-            <button type="button" className="homework-btn-icon homework-btn-reset" onClick={() => persistWeekly(new Set())} title="초기화" aria-label="초기화">
-              <IconReset />
-            </button>
           </div>
           <div className="homework-btns">
-            {WEEKLY_ITEMS.map((item) => (
+            {weeklySlots
+              .map((id) => WEEKLY_ITEMS.find((x) => x.id === id))
+              .filter(Boolean)
+              .map((item) => (
               <button
                 key={item.id}
                 type="button"
@@ -2029,141 +2886,195 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
         <div className="homework-char-section homework-raid-section homework-section-raid">
           <div className="homework-char-section-head">
             <CardDescription>레이드</CardDescription>
-            <div className="homework-raid-actions">
-              <button type="button" className="homework-btn-icon homework-btn-edit" onClick={() => setRaidModalOpen(true)} title="레이드 목록 편집" aria-label="레이드 목록 편집">
-                <IconEdit />
-              </button>
-              <button type="button" className="homework-btn-icon homework-btn-reset" onClick={() => { persistRaid({}); persistRaidChecked(new Set()); setRaidBusFees({}); setRaidBusRoles({}); saveRaidBusFees(charKey, weekKey, {}); saveRaidBusRoles(charKey, weekKey, {}); }} title="초기화" aria-label="초기화">
-                <IconReset />
-              </button>
-            </div>
           </div>
           <ul className="homework-list homework-raid-list">
-            {raidSlots.length === 0 ? (
-              <li className="homework-raid-empty">편집에서 표시할 레이드를 선택하세요.</li>
-            ) : (
+            {raidSlots.length === 0 ? null : (
               raidSlots
                 .map((id) => RAID_ITEMS.find((r) => r.id === id))
                 .filter(Boolean)
                 .map((item) => {
-                  const mode = raidModes[item.id]
-                  const mock = RAID_GOLD_MOCK[item.id]
+                  const defaultMode = 'single'
+                  const effectiveMode = raidModes[item.id] ?? defaultMode
+                  const difficultyLabel =
+                    item.difficulty === 'single'
+                      ? '싱글'
+                      : item.difficulty === 'nightmare'
+                        ? '나메'
+                        : item.difficulty === 'hard'
+                          ? '하드'
+                          : '노말'
+                  const reward = { gold: item.gold ?? 0, boundGold: item.boundGold ?? 0 }
                   const busFee = raidBusFees[item.id]
                   const busRole = raidBusRoles[item.id] ?? 'driver'
-                  const isChecked = raidChecked.has(item.id) || (mode === 'bus' && hasValidBusFee(item.id))
+                  const isChecked = raidChecked.has(item.id)
                   return (
                     <li
                       key={item.id}
                       role="button"
                       tabIndex={0}
-                      className={`homework-raid-row homework-raid-row-display ${isChecked ? 'is-checked' : ''}`}
-                      onClick={() => toggleRaid(item.id)}
+                      className={`homework-raid-row homework-raid-row-display ${effectiveMode === 'bus' ? 'is-bus' : 'is-nonbus'} ${isChecked ? 'is-checked' : ''}`}
+                      onClick={(e) => {
+                        if (effectiveMode === 'bus' && !hasValidBusFee(item.id)) {
+                          if (isCompact) {
+                            toggleRaid(item.id)
+                            return
+                          }
+                          triggerBusFeeAttention(item.id)
+                          showCardToast('버스비를 입력해 주세요.')
+                          const input = e.currentTarget.querySelector('.homework-raid-busfee-input')
+                          if (input instanceof HTMLInputElement) input.focus()
+                          return
+                        }
+                        toggleRaid(item.id)
+                      }}
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRaid(item.id); } }}
                       aria-pressed={isChecked}
                     >
-                        <div className="homework-raid-chip-head">
-                        <div className="homework-raid-row-main">
-                          <span className="homework-item-label">{item.label}</span>
-                          {mode && <span className={`homework-raid-badge homework-raid-badge-${mode}`}>{mode === 'single' ? '싱글' : '버스'}</span>}
+                        {/* 1줄: 레이드 제목+입장레벨(왼쪽), 태그(오른쪽) */}
+                        <div className="homework-raid-line homework-raid-line-head">
+                          <div className="homework-raid-line-head-left">
+                            <span className="homework-raid-title">{item.label}</span>
+                          </div>
+                        {(() => {
+                          const diffKey =
+                            item.difficulty === 'single'
+                              ? 'single'
+                              : item.difficulty === 'stage1'
+                                ? 'normal'
+                                : item.difficulty === 'stage2'
+                                  ? 'hard'
+                                  : item.difficulty === 'stage3'
+                                    ? 'nightmare'
+                                    : item.difficulty === 'nightmare'
+                                      ? 'nightmare'
+                                      : item.difficulty === 'hard'
+                                        ? 'hard'
+                                        : 'normal'
+                          return (
+                            <>
+                              <span className={`homework-raid-badge homework-raid-badge-diff-${diffKey}`}>
+                                {item.difficulty === 'stage1'
+                                  ? '1단'
+                                  : item.difficulty === 'stage2'
+                                    ? '2단'
+                                    : item.difficulty === 'stage3'
+                                      ? '3단'
+                                      : difficultyLabel}
+                              </span>
+                              {effectiveMode === 'bus' ? <span className="homework-raid-badge homework-raid-badge-bus">버스</span> : null}
+                            </>
+                          )
+                        })()}
                         </div>
-                        {mock && (mock.gold > 0 || mock.boundGold > 0) && (
-                          <div className="homework-raid-gold">
-                            {mock.gold > 0 && (
+                        {/* 2줄: 골드/귀속 (버스면 골드에 버스비 반영, 귀속만 있어도 버스면 골드 0 ± 버스비 표시) */}
+                      {reward && (reward.gold > 0 || reward.boundGold > 0 || effectiveMode === 'bus') && (
+                          <div className="homework-raid-line homework-raid-line-gold">
+                            {(reward.gold > 0 || effectiveMode === 'bus') && (
                               <span className="homework-raid-gold-item homework-gold">
                                 <span className="homework-gold-label">골드 </span>
-                                <span className="homework-gold-value">{mock.gold.toLocaleString()}</span>
+                                <span className="homework-gold-value">
+                                  {(() => {
+                                    let g = reward.gold ?? 0
+                                    if (effectiveMode === 'bus' && busFee != null && Number.isFinite(Number(busFee))) {
+                                      const fee = Number(busFee)
+                                      const sign = busRole === 'driver' ? 1 : -1
+                                      g += sign * fee
+                                    }
+                                    return g.toLocaleString()
+                                  })()}
+                                </span>
                               </span>
                             )}
-                            {mock.gold > 0 && mock.boundGold > 0 && <span className="homework-raid-gold-sep">/</span>}
-                            {mock.boundGold > 0 && (
+                            {(reward.gold > 0 || effectiveMode === 'bus') && reward.boundGold > 0 && <span className="homework-raid-gold-sep">/</span>}
+                            {reward.boundGold > 0 && (
                               <span className="homework-raid-gold-item homework-bound-gold">
                                 <span className="homework-bound-gold-label">귀속 </span>
-                                <span className="homework-bound-gold-value">{mock.boundGold.toLocaleString()}</span>
+                                <span className="homework-bound-gold-value">{reward.boundGold.toLocaleString()}</span>
                               </span>
                             )}
                           </div>
                         )}
-                        </div>
-                      {mode === 'bus' && (
+                      {effectiveMode === 'bus' && (
                         <div
                           className={`homework-raid-busfee-wrap ${busFeeAttentionId === item.id ? 'is-attention' : ''}`}
                           onClick={(e) => {
                             e.stopPropagation()
+                            const clickedInput = e.target instanceof HTMLElement && e.target.closest('.homework-raid-busfee-input')
+                            if (clickedInput) return
                             if (!hasValidBusFee(item.id)) {
                               triggerBusFeeAttention(item.id)
+                              showCardToast('버스비를 입력해 주세요.')
                             }
                             const input = e.currentTarget.querySelector('.homework-raid-busfee-input')
                             if (input instanceof HTMLInputElement) input.focus()
                           }}
                         >
                           <div className="homework-raid-busrow-inline">
-                          <div className="homework-raid-busfee">
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              className={`homework-raid-busfee-input ${busFeeAttentionId === item.id ? 'is-attention' : ''}`}
-                              value={busFee != null ? busFee : ''}
-                              onChange={(e) => {
-                                const raw = e.target.value
-                                const v = raw.replace(/[^\d]/g, '')
-                                setRaidBusFee(item.id, v === '' ? '' : v)
-                              }}
-                              onBlur={(e) => {
-                                const raw = e.target.value.replace(/[^\d]/g, '')
-                                const n = raw === '' ? null : Number(raw)
-                                const isValid = n != null && Number.isFinite(n) && n >= 0
-                                if (isValid) {
-                                  persistRaidChecked(new Set([...raidChecked, item.id]))
-                                  setBusFeeAttentionId((prev) => (prev === item.id ? null : prev))
-                                } else {
-                                  persistRaidChecked(new Set([...raidChecked].filter((x) => x !== item.id)))
-                                }
+                            <div
+                              className={`homework-raid-busrole-switch ${busRole === 'passenger' ? 'is-passenger' : 'is-driver'}`}
+                              role="button"
+                              tabIndex={0}
+                              aria-label="기사 승객 전환"
+                              aria-pressed={busRole === 'passenger'}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setRaidBusRole(item.id, busRole === 'passenger' ? 'driver' : 'passenger')
                               }}
                               onKeyDown={(e) => {
-                                if (e.key !== 'Enter') return
-                                const raw = e.currentTarget.value.replace(/[^\d]/g, '')
-                                const n = raw === '' ? null : Number(raw)
-                                const isValid = n != null && Number.isFinite(n) && n >= 0
-                                if (isValid) {
-                                  persistRaidChecked(new Set([...raidChecked, item.id]))
-                                  setBusFeeAttentionId((prev) => (prev === item.id ? null : prev))
-                                } else {
-                                  triggerBusFeeAttention(item.id)
-                                }
+                                if (e.key !== 'Enter' && e.key !== ' ') return
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setRaidBusRole(item.id, busRole === 'passenger' ? 'driver' : 'passenger')
                               }}
-                              placeholder="버스비 입력"
-                            />
-                            <span className="homework-raid-busfee-unit">G</span>
-                          </div>
-                            <div className={`homework-raid-busrole-switch ${busRole === 'passenger' ? 'is-passenger' : 'is-driver'}`}>
+                            >
                               <span className="homework-raid-busrole-thumb" aria-hidden />
-                              <button
-                                type="button"
-                                className="homework-raid-busrole-opt"
-                                onClick={(e) => { e.stopPropagation(); setRaidBusRole(item.id, 'driver') }}
-                                aria-pressed={busRole === 'driver'}
-                                aria-label="기사"
-                              >
-                                기사
-                              </button>
-                              <button
-                                type="button"
-                                className="homework-raid-busrole-opt"
-                                onClick={(e) => { e.stopPropagation(); setRaidBusRole(item.id, 'passenger') }}
-                                aria-pressed={busRole === 'passenger'}
-                                aria-label="승객"
-                              >
-                                승객
-                              </button>
+                              <span className="homework-raid-busrole-opt" aria-hidden>기사</span>
+                              <span className="homework-raid-busrole-opt" aria-hidden>승객</span>
                             </div>
-                          </div>
-                          <div className="homework-raid-total-gold">
-                            총 획득골드 <strong>{(() => {
-                              const base = (mock?.gold ?? 0) + (mock?.boundGold ?? 0)
-                              const fee = (busFee != null && Number.isFinite(Number(busFee)) ? Number(busFee) : 0)
-                              const sign = busRole === 'driver' ? 1 : -1
-                              return (base + sign * fee).toLocaleString()
-                            })()}</strong> <span className="homework-g-unit">G</span>
+                            <div className="homework-raid-busfee">
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                className={`homework-raid-busfee-input ${busFeeAttentionId === item.id ? 'is-attention' : ''}`}
+                                value={busFee != null ? busFee : ''}
+                                onChange={(e) => {
+                                  const raw = e.target.value
+                                  const v = raw.replace(/[^\d]/g, '')
+                                  setRaidBusFee(item.id, v === '' ? '' : v)
+                                  scheduleBusAutoCheck(item.id, v)
+                                }}
+                                onBlur={(e) => {
+                                  clearBusAutoCheckTimer(item.id)
+                                  const raw = e.target.value.replace(/[^\d]/g, '')
+                                  const n = raw === '' ? null : Number(raw)
+                                  const isValid = n != null && Number.isFinite(n) && n >= 0
+                                  if (isValid) {
+                                    persistRaidChecked(new Set([...raidChecked, item.id]))
+                                    setBusFeeAttentionId((prev) => (prev === item.id ? null : prev))
+                                  } else {
+                                    persistRaidChecked(new Set([...raidChecked].filter((x) => x !== item.id)))
+                                    triggerBusFeeAttention(item.id)
+                                    showCardToast('버스비를 입력해 주세요.')
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key !== 'Enter') return
+                                  clearBusAutoCheckTimer(item.id)
+                                  const raw = e.currentTarget.value.replace(/[^\d]/g, '')
+                                  const n = raw === '' ? null : Number(raw)
+                                  const isValid = n != null && Number.isFinite(n) && n >= 0
+                                  if (isValid) {
+                                    persistRaidChecked(new Set([...raidChecked, item.id]))
+                                    setBusFeeAttentionId((prev) => (prev === item.id ? null : prev))
+                                  } else {
+                                    persistRaidChecked(new Set([...raidChecked].filter((x) => x !== item.id)))
+                                    triggerBusFeeAttention(item.id)
+                                    showCardToast('버스비를 입력해 주세요.')
+                                  }
+                                }}
+                                placeholder="버스비 입력"
+                              />
+                            </div>
                           </div>
                         </div>
                       )}
@@ -2190,19 +3101,25 @@ function CharacterHomeworkCard({ character, today, weekKey, onRemove, onComplete
       )}
     </Card>
     </div>
-    {raidModalOpen && typeof document !== 'undefined' && createPortal(
-      <RaidSelectModal
+    {editModalOpen && typeof document !== 'undefined' && createPortal(
+      <CharacterEditModal
         characterName={name}
-        selectedIds={raidSlots}
+        characterClassName={className}
+        itemLevelValue={itemLevel}
+        weeklyChecked={weeklySlots}
+        raidSlots={raidSlots}
         raidModes={raidModes}
-        onSave={(ids, modes) => {
-          setRaidSlots(ids)
-          saveRaidSlots(charKey, ids)
-          setRaidModes(modes)
-          saveRaidModes(charKey, weekKey, modes)
-          setRaidModalOpen(false)
+        onSave={(nextWeekly, raidIds, raidModesNext) => {
+          const weeklyIds = WEEKLY_ITEMS.filter((x) => nextWeekly.has(x.id)).map((x) => x.id)
+          setWeeklySlots(weeklyIds)
+          saveWeeklySlots(charKey, weeklyIds)
+          setRaidSlots(raidIds)
+          saveRaidSlots(charKey, raidIds)
+          setRaidModes(raidModesNext)
+          saveRaidModes(charKey, weekKey, raidModesNext)
+          setEditModalOpen(false)
         }}
-        onClose={() => setRaidModalOpen(false)}
+        onClose={() => setEditModalOpen(false)}
       />,
       document.body
     )}
@@ -2228,13 +3145,29 @@ export function HomeworkPanel() {
   const [searchResults, setSearchResults] = useState([])
   const [registerLoading, setRegisterLoading] = useState(false)
   const [registerError, setRegisterError] = useState('')
+  const [instantSelectedKeys, setInstantSelectedKeys] = useState(() => new Set())
+  const [isRegisterClosing, setIsRegisterClosing] = useState(false)
+  const [expeditionLevelHint, setExpeditionLevelHint] = useState(() => loadExpeditionLevelHint())
   const [viewMode, setViewMode] = useState(() => loadViewMode())
   const [orderModalOpen, setOrderModalOpen] = useState(false)
   const [cardGraphFlippedKeys, setCardGraphFlippedKeys] = useState(() => new Set())
   const [graphBlockedShakeKey, setGraphBlockedShakeKey] = useState(0)
   const [useCustomOrder, setUseCustomOrder] = useState(() => loadUseCustomOrder())
   const [loginShakeTarget, setLoginShakeTarget] = useState('')
+  const [panelToast, setPanelToast] = useState(null)
+  const registerResetTimeoutRef = useRef(null)
+  const panelToastTimerRef = useRef(null)
+  const panelRef = useRef(null)
   const isCompactView = viewMode === 'compact'
+  const showPanelToast = useCallback((message) => {
+    const id = Date.now()
+    setPanelToast({ id, message })
+    if (panelToastTimerRef.current != null) clearTimeout(panelToastTimerRef.current)
+    panelToastTimerRef.current = setTimeout(() => {
+      setPanelToast((prev) => (prev?.id === id ? null : prev))
+      panelToastTimerRef.current = null
+    }, 1800)
+  }, [])
 
   const hasRegistered = registered.length > 0
   const hasExpeditionCard = expeditionCards.length > 0
@@ -2272,33 +3205,56 @@ export function HomeworkPanel() {
   const addRegistered = useCallback((character) => {
     if (!character?.CharacterName || !character?.ServerName) return
     const key = getCharKey(character)
-    const ensureExpeditionLevel = async (src) => {
-      const existing = Number(String(src?.ExpeditionLevel ?? '').replace(/[^\d.]/g, ''))
-      if (Number.isFinite(existing) && existing > 0) return src
+    const alreadyRegistered = loadRegistered().some((c) => getCharKey(c) === key)
+    if (alreadyRegistered) return
+    const level = formatItemLevel(character?.ItemAvgLevel ?? character?.ItemMaxLevel)
+    const initialRaidIds = getDefaultRaidIdsByLevel(level)
+    // 신규 추가 시점에 레이드 슬롯을 즉시 초기화해, 추천 0개 캐릭터는 바로 레이드 100%로 표시되게 한다.
+    saveRaidSlots(key, initialRaidIds)
+    // 즉시 등록 (UI 반응성)
+    setInstantSelectedKeys((prev) => new Set([...prev, key]))
+    setRegistered((prev) => {
+      const next = [...prev, { ...character }]
+      saveRegistered(next)
+      return next
+    })
+    setCardOrder((prev) => {
+      if (prev.includes(key)) return prev
+      const next = [...prev, key]
+      saveCardOrder(next)
+      return next
+    })
+    // 백그라운드에서 ExpeditionLevel 보강
+    ;(async () => {
+      const existing = Number(String(character?.ExpeditionLevel ?? '').replace(/[^\d.]/g, ''))
+      if (Number.isFinite(existing) && existing > 0) {
+        setExpeditionLevelHint((prev) => {
+          const next = Math.max(prev ?? 0, Math.floor(existing))
+          saveExpeditionLevelHint(next)
+          return next
+        })
+        return
+      }
       try {
-        const armory = await fetchCharacterArmory(src.CharacterName)
+        const armory = await fetchCharacterArmory(character.CharacterName)
         const rawLevel = armory?.ArmoryProfile?.ExpeditionLevel ?? armory?.ExpeditionLevel
         const nextLevel = Number(String(rawLevel ?? '').replace(/[^\d.]/g, ''))
-        if (!Number.isFinite(nextLevel) || nextLevel <= 0) return src
-        return { ...src, ExpeditionLevel: nextLevel }
+        if (!Number.isFinite(nextLevel) || nextLevel <= 0) return
+        setExpeditionLevelHint((prev) => {
+          const next = Math.max(prev ?? 0, Math.floor(nextLevel))
+          saveExpeditionLevelHint(next)
+          return next
+        })
+        setRegistered((prev) => {
+          const next = prev.map((c) =>
+            getCharKey(c) === key ? { ...c, ExpeditionLevel: nextLevel } : c
+          )
+          saveRegistered(next)
+          return next
+        })
       } catch {
-        return src
+        // 무시
       }
-    }
-    ;(async () => {
-      const enriched = await ensureExpeditionLevel(character)
-      setRegistered((prev) => {
-        if (prev.some((c) => getCharKey(c) === key)) return prev
-        const next = [...prev, { ...enriched }]
-        saveRegistered(next)
-        return next
-      })
-      setCardOrder((prev) => {
-        if (prev.includes(key)) return prev
-        const next = [...prev, key]
-        saveCardOrder(next)
-        return next
-      })
     })()
   }, [])
 
@@ -2404,10 +3360,12 @@ export function HomeworkPanel() {
 
   const handleLoginRequiredClick = useCallback((target) => {
     setLoginShakeTarget(target)
+    const label = target === 'friend' ? '깐부' : target === 'party' ? '파티' : '공대'
+    showPanelToast(`${label} 기능은 준비 중이에요.`)
     setTimeout(() => {
       setLoginShakeTarget((prev) => (prev === target ? '' : prev))
     }, 220)
-  }, [])
+  }, [showPanelToast])
 
   const removeExpeditionCard = useCallback((expId) => {
     setExpeditionCards((prev) => {
@@ -2432,52 +3390,165 @@ export function HomeworkPanel() {
     setRegisterLoading(true)
     try {
       const data = await fetchCharacterSiblings(name)
-      const list = Array.isArray(data) ? data : []
+      if (searchRequestIdRef.current !== requestId) return
+      const raw = Array.isArray(data) ? data : []
+      const list = raw
+        .filter((c) => c != null && typeof c === 'object' && !Array.isArray(c))
+        .map((c) => ({
+          ...c,
+          CharacterName: normalizeText(c.CharacterName, '(알 수 없음)'),
+          ServerName: normalizeText(c.ServerName, '알 수 없음'),
+          CharacterClassName: normalizeText(c.CharacterClassName, ''),
+        }))
+      setRegisterLoading(false)
+      if (list.length === 0) {
+        setRegisterError('검색 결과가 없습니다.')
+        return
+      }
+      const hintFromList = list
+        .map((c) => Number(String(c?.ExpeditionLevel ?? '').replace(/[^\d.]/g, '')))
+        .filter((v) => Number.isFinite(v) && v > 0)
+      if (hintFromList.length > 0) {
+        const nextHint = Math.max(...hintFromList.map((v) => Math.floor(v)))
+        setExpeditionLevelHint((prev) => {
+          const next = Math.max(prev ?? 0, nextHint)
+          saveExpeditionLevelHint(next)
+          return next
+        })
+      }
       setSearchResults(list)
-      if (list.length === 0) setRegisterError('검색 결과가 없습니다.')
-      if (list.length > 0) {
-        const enriched = await Promise.all(
-          list.slice(0, 10).map(async (char) => {
-            const raw = Number(String(char?.ExpeditionLevel ?? '').replace(/[^\d.]/g, ''))
-            if (Number.isFinite(raw) && raw > 0) return char
-            try {
-              const armory = await fetchCharacterArmory(char.CharacterName)
-              const fromArmory = armory?.ArmoryProfile?.ExpeditionLevel ?? armory?.ExpeditionLevel
-              const parsed = Number(String(fromArmory ?? '').replace(/[^\d.]/g, ''))
-              if (!Number.isFinite(parsed) || parsed <= 0) return char
-              return { ...char, ExpeditionLevel: parsed }
-            } catch {
-              return char
-            }
-          })
-        )
-        if (searchRequestIdRef.current === requestId) {
-          const byKey = new Map(enriched.map((c) => [getCharKey(c), c]))
-          setSearchResults((prev) => prev.map((c) => byKey.get(getCharKey(c)) ?? c))
-        }
+      // 첫 번째 결과에서만 ExpeditionLevel 보강 (연결 한도 초과 방지)
+      const first = list[0]
+      const firstExpLevel = Number(String(first?.ExpeditionLevel ?? '').replace(/[^\d.]/g, ''))
+      if (!Number.isFinite(firstExpLevel) || firstExpLevel <= 0) {
+        ;(async () => {
+          try {
+            const armory = await fetchCharacterArmory(first.CharacterName)
+            if (searchRequestIdRef.current !== requestId) return
+            const fromArmory = armory?.ArmoryProfile?.ExpeditionLevel ?? armory?.ExpeditionLevel
+            const parsed = Number(String(fromArmory ?? '').replace(/[^\d.]/g, ''))
+            if (!Number.isFinite(parsed) || parsed <= 0) return
+            setExpeditionLevelHint((prev) => {
+              const next = Math.max(prev ?? 0, Math.floor(parsed))
+              saveExpeditionLevelHint(next)
+              return next
+            })
+            setSearchResults((prev) =>
+              prev.map((c) =>
+                getCharKey(c) === getCharKey(first) ? { ...c, ExpeditionLevel: parsed } : c
+              )
+            )
+          } catch {
+            // 무시
+          }
+        })()
       }
     } catch (e) {
+      if (searchRequestIdRef.current !== requestId) return
+      setRegisterLoading(false)
       setRegisterError(e instanceof Error ? e.message : '검색에 실패했습니다.')
       setSearchResults([])
-    } finally {
-      setRegisterLoading(false)
     }
   }
 
   const toggleRemoteRegisterForm = useCallback(() => {
+    if (registerResetTimeoutRef.current != null) {
+      clearTimeout(registerResetTimeoutRef.current)
+      registerResetTimeoutRef.current = null
+    }
     setShowRegisterForm((prev) => {
-      const next = !prev
-      if (!next) {
-        setRegisterInput('')
-        setSearchResults([])
-        setRegisterError('')
-        setRegisterLoading(false)
+      if (prev) {
+        setIsRegisterClosing(true)
+        registerResetTimeoutRef.current = setTimeout(() => {
+          setRegisterInput('')
+          setSearchResults([])
+          setRegisterError('')
+          setRegisterLoading(false)
+          setInstantSelectedKeys(new Set())
+          setIsRegisterClosing(false)
+          registerResetTimeoutRef.current = null
+        }, 340)
+        return false
       }
-      return next
+      setIsRegisterClosing(false)
+      return true
     })
   }, [])
 
+  const enforceNoInnerScroll = useCallback(() => {
+    if (typeof document === 'undefined') return
+    const tabsContent = document.querySelector('.ui-tabs-content-homework')
+    const targets = [
+      document.querySelector('.app-shell'),
+      tabsContent,
+      tabsContent?.parentElement,
+      panelRef.current,
+      panelRef.current?.querySelector('.homework-layout'),
+      panelRef.current?.querySelector('.homework-main'),
+      panelRef.current?.querySelector('.homework-by-server'),
+      panelRef.current?.querySelector('.homework-char-grid'),
+      panelRef.current?.querySelector('.homework-char-grid-masonry'),
+    ].filter(Boolean)
+    targets.forEach((node) => {
+      if (!(node instanceof HTMLElement)) return
+      node.style.setProperty('overflow', 'visible', 'important')
+      node.style.setProperty('overflow-y', 'visible', 'important')
+      node.style.setProperty('max-height', 'none', 'important')
+      node.style.setProperty('height', 'auto', 'important')
+    })
+  }, [])
+
+  useLayoutEffect(() => {
+    enforceNoInnerScroll()
+    if (typeof ResizeObserver === 'undefined' || !panelRef.current) return
+    const ro = new ResizeObserver(() => enforceNoInnerScroll())
+    ro.observe(panelRef.current)
+    return () => ro.disconnect()
+  }, [enforceNoInnerScroll])
+
   const keysRegistered = useMemo(() => new Set(registered.map(getCharKey)), [registered])
+
+  useEffect(() => {
+    setInstantSelectedKeys((prev) => {
+      const next = new Set([...prev].filter((key) => keysRegistered.has(key)))
+      if (next.size === prev.size) return prev
+      return next
+    })
+  }, [keysRegistered])
+
+  const groupedSearchResults = useMemo(() => {
+    const serverMap = new Map()
+    searchResults.forEach((char) => {
+      if (!char || typeof char !== 'object') return
+      const server = normalizeText(char?.ServerName, '알 수 없음')
+      if (!serverMap.has(server)) serverMap.set(server, [])
+      serverMap.get(server).push(char)
+    })
+    // 각 서버 내 아이템레벨 내림차순 정렬
+    serverMap.forEach((chars) => {
+      chars.sort((a, b) => {
+        const la = formatSearchItemLevel(a?.ItemAvgLevel ?? a?.ItemMaxLevel) ?? 0
+        const lb = formatSearchItemLevel(b?.ItemAvgLevel ?? b?.ItemMaxLevel) ?? 0
+        return lb - la
+      })
+    })
+    // 서버 순서: 해당 서버의 최고 아이템레벨 기준 내림차순
+    const entries = Array.from(serverMap.entries()).sort((a, b) => {
+      const maxA = Math.max(...a[1].map((c) => formatSearchItemLevel(c?.ItemAvgLevel ?? c?.ItemMaxLevel) ?? 0))
+      const maxB = Math.max(...b[1].map((c) => formatSearchItemLevel(c?.ItemAvgLevel ?? c?.ItemMaxLevel) ?? 0))
+      return maxB - maxA
+    })
+    return entries
+  }, [searchResults])
+
+  useEffect(() => {
+    return () => {
+      if (registerResetTimeoutRef.current != null) {
+        clearTimeout(registerResetTimeoutRef.current)
+      }
+    }
+  }, [])
+
   const expeditionLevelFetchAttemptedRef = useRef(new Set())
 
   useEffect(() => {
@@ -2669,6 +3740,7 @@ export function HomeworkPanel() {
     const expWeeklyRateHistory = new Array(24).fill(0)
     const expRaidRateHistory = new Array(24).fill(0)
     const expWeeklyGoldHistory = new Array(24).fill(0)
+    const expWeeklyBoundGoldHistory = new Array(24).fill(0)
     let expDailyTaskHistory = null
     let expWeeklyTaskHistory = null
     let expRaidTaskHistory = null
@@ -2691,6 +3763,12 @@ export function HomeworkPanel() {
         const weeklyRateHistory = weeklyTaskHistory.map((w) => Math.round(w.ratio * 100))
         const raidRateHistory = raidTaskHistory.map((r) => Math.round(r.ratio * 100))
         const weeklyGoldHistory = makeWeeklyGoldHistory(h + 29, 24)
+        const weeklyBoundGoldHistory = weeklyGoldHistory.map((v, i) => {
+          // mock 값이지만, 귀속골(바운드)을 따로 보여주기 위해 거래가능골드 일부를 귀속골로 분리
+          const ratio = 0.14 + (((h + i) % 9) * 0.01) // 0.14 ~ 0.22
+          const bound = Math.round(v * ratio)
+          return Math.max(0, Math.min(v, bound))
+        })
         byKey[key] = {
           name: c?.CharacterName ?? '알 수 없음',
           gold,
@@ -2704,6 +3782,7 @@ export function HomeworkPanel() {
           raidRateHistory,
           raidTaskHistory,
           weeklyGoldHistory,
+          weeklyBoundGoldHistory,
         }
         expGold += gold
         expDaily += dailyRate
@@ -2714,6 +3793,7 @@ export function HomeworkPanel() {
           expWeeklyRateHistory[i] += weeklyRateHistory[i]
           expRaidRateHistory[i] += raidRateHistory[i]
           expWeeklyGoldHistory[i] += weeklyGoldHistory[i]
+          expWeeklyBoundGoldHistory[i] += weeklyBoundGoldHistory[i]
         }
         if (!expDailyTaskHistory) expDailyTaskHistory = dailyTaskHistory
         if (!expWeeklyTaskHistory) expWeeklyTaskHistory = weeklyTaskHistory
@@ -2736,6 +3816,7 @@ export function HomeworkPanel() {
         raidRateHistory: expCount > 0 ? expRaidRateHistory.map((v) => Math.round(v / expCount)) : new Array(24).fill(0),
         raidTaskHistory: expRaidTaskHistory ?? new Array(24).fill({ done: [], miss: [] }),
         weeklyGoldHistory: expWeeklyGoldHistory,
+        weeklyBoundGoldHistory: expWeeklyBoundGoldHistory,
       }
     }
     return byKey
@@ -2745,12 +3826,19 @@ export function HomeworkPanel() {
     const levels = registered
       .map((c) => Number(String(c?.ExpeditionLevel ?? '').replace(/[^\d.]/g, '')))
       .filter((v) => Number.isFinite(v) && v > 0)
-    if (levels.length === 0) return null
-    return Math.max(...levels)
-  }, [registered])
+    const maxRegistered = levels.length > 0 ? Math.max(...levels.map((v) => Math.floor(v))) : null
+    const hint = expeditionLevelHint != null ? Math.floor(expeditionLevelHint) : null
+    if (maxRegistered == null && hint == null) return null
+    return Math.max(maxRegistered ?? 0, hint ?? 0)
+  }, [registered, expeditionLevelHint])
+
+  useEffect(() => {
+    if (expeditionLevelValue == null) return
+    saveExpeditionLevelHint(expeditionLevelValue)
+  }, [expeditionLevelValue])
 
   return (
-    <section className={`view-panel homework-panel homework-panel-${viewMode}`}>
+    <section ref={panelRef} className={`view-panel homework-panel homework-panel-${viewMode}`}>
       <div className="homework-layout">
         <div className="homework-main">
           {!hasAnyCards ? (
@@ -2855,6 +3943,7 @@ export function HomeworkPanel() {
                         onDismissComplete={handleDismissComplete}
                         isAnimatingComplete={animatingCompleteKeys.has(charKey)}
                         onOpenGraph={() => openCardGraph(charKey)}
+                        onShowToast={showPanelToast}
                       />
                     </HomeworkCardFlipWrapper>
                   )
@@ -2890,15 +3979,15 @@ export function HomeworkPanel() {
               <div className="homework-remote-register-toggle">
                 <button
                   type="button"
-                  className={`homework-toolbar-btn homework-toolbar-btn-register homework-toolbar-btn-register-trigger ${showRegisterForm ? 'is-open' : ''}`}
+                  className={`homework-toolbar-btn homework-toolbar-btn-register homework-toolbar-btn-register-trigger ${(showRegisterForm || isRegisterClosing) ? 'is-open' : ''}`}
                   onClick={toggleRemoteRegisterForm}
                   title="캐릭터 등록"
                 >
-                  {showRegisterForm ? <IconMinus /> : <IconPlus />}
-                  {!showRegisterForm && <span>캐릭터</span>}
+                  {(showRegisterForm || isRegisterClosing) ? <IconMinus /> : <IconPlus />}
+                  <span className={`homework-register-trigger-label ${(showRegisterForm || isRegisterClosing) ? 'is-hidden' : ''}`}>캐릭터</span>
                 </button>
-                <div className={`homework-remote-register ${showRegisterForm ? 'is-open' : ''}`}>
-                    <>
+                <div className={`homework-remote-register ${showRegisterForm ? 'is-open' : ''} ${isRegisterClosing ? 'is-closing' : ''}`}>
+                  <div className="homework-remote-register-body">
                     <div className="homework-remote-register-row">
                       <Input
                         placeholder="닉네임 검색"
@@ -2912,40 +4001,79 @@ export function HomeworkPanel() {
                       </button>
                     </div>
                     {registerError && <p className="homework-register-error">{registerError}</p>}
-                    {searchResults.length > 0 && (
-                      <ul className="homework-remote-search-results">
-                        {searchResults.map((char, idx) => {
-                          const key = getCharKey(char)
-                          const isAdded = keysRegistered.has(key)
-                          const level = formatItemLevel(char?.ItemAvgLevel ?? char?.ItemMaxLevel)
-                          const expeditionLevel = Number(String(char?.ExpeditionLevel ?? '').replace(/[^\d.]/g, ''))
-                          return (
-                          <li
-                            key={key}
-                            className={`homework-remote-search-item ${isAdded ? 'is-added' : ''}`}
-                            style={{ '--result-index': idx }}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => (isAdded ? removeRegistered(char) : addRegistered(char))}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault()
-                                isAdded ? removeRegistered(char) : addRegistered(char)
-                              }
-                            }}
-                            aria-pressed={isAdded}
-                          >
-                            <ClassIcon className={char?.CharacterClassName} size={18} />
-                              <span className="homework-remote-search-name">{char.CharacterName}</span>
-                              <span className="homework-remote-search-level">{level != null ? level : '-'}</span>
-                              <span className="homework-remote-search-exp-level">{Number.isFinite(expeditionLevel) && expeditionLevel > 0 ? `원정대 Lv.${expeditionLevel}` : ''}</span>
-                              {isAdded && <span className="homework-remote-search-added-mark" aria-hidden><IconCheck /></span>}
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    )}
-                    </>
+                    {groupedSearchResults.length > 0 && (
+                      <div className="homework-remote-search-results">
+                        {groupedSearchResults.map(([serverName, chars]) => (
+                          <div key={serverName} className="homework-remote-search-server-group">
+                            <div className="homework-remote-search-server-head">{serverName}</div>
+                            <ul className="homework-remote-search-server-list">
+                              {chars.map((char, idx) => {
+                                if (!char || typeof char !== 'object') return null
+                                const safeChar = {
+                                  ...char,
+                                  CharacterName: normalizeText(char.CharacterName, '(알 수 없음)'),
+                                  ServerName: normalizeText(char.ServerName, '알 수 없음'),
+                                  CharacterClassName: normalizeText(char.CharacterClassName, ''),
+                                }
+                                const key = getCharKey(safeChar)
+                                const isAdded = keysRegistered.has(key) || instantSelectedKeys.has(key)
+                                const level = formatSearchItemLevel(safeChar?.ItemAvgLevel ?? safeChar?.ItemMaxLevel)
+                                return (
+                                  <li
+                                    key={`${key}-${idx}`}
+                                    className={`homework-remote-search-item ${isAdded ? 'is-added' : ''}`}
+                                    style={{ '--result-index': idx }}
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => {
+                                      if (isAdded) {
+                                        removeRegistered(safeChar)
+                                        setInstantSelectedKeys((prev) => {
+                                          const next = new Set(prev)
+                                          next.delete(key)
+                                          return next
+                                        })
+                                      } else {
+                                        addRegistered(safeChar)
+                                      }
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault()
+                                        if (isAdded) {
+                                          removeRegistered(safeChar)
+                                          setInstantSelectedKeys((prev) => {
+                                            const next = new Set(prev)
+                                            next.delete(key)
+                                            return next
+                                          })
+                                        } else {
+                                          addRegistered(safeChar)
+                                        }
+                                      }
+                                    }}
+                                    aria-pressed={isAdded}
+                                  >
+                                    <div className="homework-class-icon-wrap">
+                                      <ClassIcon className={safeChar?.CharacterClassName} size={22} />
+                                    </div>
+                                    <div className="homework-remote-search-text">
+                                      <span className="homework-remote-search-name">{safeChar.CharacterName}</span>
+                                      {isAdded ? (
+                                        <span className="homework-remote-search-check" aria-hidden><IconCheck /></span>
+                                      ) : (
+                                        <span className="homework-remote-search-level">{level != null ? level : '-'}</span>
+                                      )}
+                                    </div>
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          </div>
+                        ))}
+                       </div>
+                     )}
+                  </div>
                 </div>
               </div>
               <button type="button" className="homework-toolbar-btn homework-toolbar-btn-order" onClick={() => setOrderModalOpen(true)} title="카드 순서 편집" aria-label="카드 순서 편집" disabled={gridItems.length < 2}>
@@ -2959,6 +4087,7 @@ export function HomeworkPanel() {
                   if (isCompactView) {
                     setGraphBlockedShakeKey((k) => k + 1)
                     setTimeout(() => setGraphBlockedShakeKey(0), 220)
+                    showPanelToast('요약 모드에서는 그래프를 열 수 없어요.')
                     return
                   }
                   setCardGraphFlippedKeys((prev) => {
@@ -2977,6 +4106,12 @@ export function HomeworkPanel() {
                 onClick={() => handleLoginRequiredClick('friend')}
                 title="깐부"
               >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="9" cy="9" r="2" />
+                  <circle cx="15" cy="9" r="2" />
+                  <path d="M4.5 20c0-3 2.5-5.5 5.5-5.5S15.5 17 15.5 20" />
+                  <path d="M8.5 20c0-2.5 2-4.5 4.5-4.5s4.5 2 4.5 4.5" />
+                </svg>
                 깐부
               </button>
               <button
@@ -2985,6 +4120,17 @@ export function HomeworkPanel() {
                 onClick={() => handleLoginRequiredClick('party')}
                 title="파티"
               >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="7.5" cy="8" r="2" />
+                  <circle cx="16.5" cy="8" r="2" />
+                  <circle cx="7.5" cy="15" r="2" />
+                  <circle cx="16.5" cy="15" r="2" />
+
+                  <path d="M4.7 20.8c.7-2.6 2.7-4.3 5.3-4.3s4.6 1.7 5.3 4.3" />
+                  <path d="M12.7 20.8c.7-2.6 2.7-4.3 5.3-4.3s4.6 1.7 5.3 4.3" />
+                  <path d="M4.7 22.5c.7-2.2 2.7-3.7 5.3-3.7s4.6 1.5 5.3 3.7" />
+                  <path d="M12.7 22.5c.7-2.2 2.7-3.7 5.3-3.7s4.6 1.5 5.3 3.7" />
+                </svg>
                 파티
               </button>
               <button
@@ -2993,22 +4139,50 @@ export function HomeworkPanel() {
                 onClick={() => handleLoginRequiredClick('raid')}
                 title="공대"
               >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="6" cy="8" r="2" />
+                  <circle cx="10" cy="8" r="2" />
+                  <circle cx="14" cy="8" r="2" />
+                  <circle cx="18" cy="8" r="2" />
+                  <circle cx="6" cy="14" r="2" />
+                  <circle cx="10" cy="14" r="2" />
+                  <circle cx="14" cy="14" r="2" />
+                  <circle cx="18" cy="14" r="2" />
+                  <path d="M4 20h16" />
+                </svg>
                 공대
               </button>
               <button
                 type="button"
-                className={`homework-mode-switch ${viewMode === 'detailed' ? 'is-detailed' : 'is-compact'}`}
+                className={`homework-mode-switch ${viewMode === 'compact' ? 'is-detailed' : 'is-compact'}`}
                 onClick={() => setViewModeAndSave(viewMode === 'compact' ? 'detailed' : 'compact')}
-                aria-label={`보기 방식 전환: 현재 ${viewMode === 'compact' ? '간략하게' : '자세히'}`}
+                aria-label={`보기 방식 전환: 현재 ${viewMode === 'compact' ? '요약' : '상세'}`}
               >
-                <span className="homework-mode-switch-label is-left">간략하게</span>
-                <span className="homework-mode-switch-label is-right">자세히</span>
+                <span className="homework-mode-switch-label is-left">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="M21 21l-4.2-4.2" />
+                  </svg>
+                  상세
+                </span>
+                <span className="homework-mode-switch-label is-right">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="4.8" cy="6.2" r="1" />
+                    <circle cx="4.8" cy="12" r="1" />
+                    <circle cx="4.8" cy="17.8" r="1" />
+                    <path d="M8 6.2h13" />
+                    <path d="M8 12h13" />
+                    <path d="M8 17.8h13" />
+                  </svg>
+                  요약
+                </span>
                 <span className="homework-mode-switch-thumb" aria-hidden />
               </button>
             </CardContent>
           </Card>
         </aside>
       </div>
+      {panelToast ? <div className="homework-modal-toast homework-global-toast">{panelToast.message}</div> : null}
 
       {orderModalOpen && (
         <OrderEditModal

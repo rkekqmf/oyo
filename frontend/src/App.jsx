@@ -22,7 +22,7 @@ import { fetchCharacterArmory } from './services/lostarkApi'
 
 /** adminOnly: true 이면 일반 모드에서는 탭이 보이지 않음 (관리자만) */
 const VIEWS = [
-  { id: 'search', label: '캐릭터 검색' },
+  { id: 'search', label: '캐릭터 검색', adminOnly: true },
   { id: 'homework', label: '숙제' },
   { id: 'market', label: '경매장 추이', adminOnly: true },
   { id: 'boss', label: '보스 준비도', adminOnly: true },
@@ -34,6 +34,15 @@ const VIEWS = [
 
 function App() {
   const { isAdminMode, toggleAdminMode } = useAdminMode()
+  const DESIGN_THEME_STORAGE_KEY = 'oyo_design_theme'
+  const [designTheme, setDesignTheme] = useState(() => {
+    try {
+      const v = localStorage.getItem(DESIGN_THEME_STORAGE_KEY)
+      return v === 'light' || v === 'dark' ? v : 'default'
+    } catch {
+      return 'default'
+    }
+  })
   const {
     name,
     setName,
@@ -58,9 +67,21 @@ function App() {
   const [detailData, setDetailData] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState('')
-  const [activeView, setActiveView] = useState('search')
+  const [activeView, setActiveView] = useState('homework')
   const adminClickCount = useRef(0)
   const adminClickTimer = useRef(null)
+
+  useEffect(() => {
+    const root = document.documentElement
+    if (designTheme === 'default') {
+      delete root.dataset.theme
+    } else {
+      root.dataset.theme = designTheme
+    }
+    try {
+      localStorage.setItem(DESIGN_THEME_STORAGE_KEY, designTheme)
+    } catch {}
+  }, [designTheme])
 
   const handleAdminAreaClick = () => {
     adminClickCount.current += 1
@@ -78,6 +99,10 @@ function App() {
   const visibleViews = useMemo(
     () => VIEWS.filter((v) => !v.adminOnly || isAdminMode),
     [isAdminMode]
+  )
+  const menuViews = useMemo(
+    () => visibleViews.filter((v) => v.id !== 'login'),
+    [visibleViews]
   )
   const activeViewValid = useMemo(
     () => visibleViews.some((v) => v.id === activeView),
@@ -136,20 +161,79 @@ function App() {
           title={isAdminMode ? '관리자 모드 (5번 클릭으로 해제)' : undefined}
         >
           <h1 className="app-logo">
-            <span className="app-logo-o">o</span>y<span className="app-logo-o">o</span>
+            <span className="app-logo-letter app-logo-o">O</span>
+            <span className="app-logo-letter">Y</span>
+            <span className="app-logo-letter app-logo-o">O</span>
           </h1>
-          <p>로스트아크 캐릭터 정보를 빠르게 조회해보세요.</p>
+        </div>
+
+        <div className="app-header-actions">
+          <div className="app-theme-toggle" role="group" aria-label="디자인 모드">
+            <button
+              type="button"
+              className={`app-theme-btn ${designTheme === 'default' ? 'is-active' : ''}`}
+              onClick={() => setDesignTheme('default')}
+              aria-label="기본모드"
+              title="기본모드"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                <rect x="14" y="14" width="7" height="7" rx="1.5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className={`app-theme-btn ${designTheme === 'light' ? 'is-active' : ''}`}
+              onClick={() => setDesignTheme('light')}
+              aria-label="라이트모드"
+              title="라이트모드"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2" />
+                <path d="M12 20v2" />
+                <path d="M4.93 4.93l1.41 1.41" />
+                <path d="M17.66 17.66l1.41 1.41" />
+                <path d="M2 12h2" />
+                <path d="M20 12h2" />
+                <path d="M4.93 19.07l1.41-1.41" />
+                <path d="M17.66 6.34l1.41-1.41" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className={`app-theme-btn ${designTheme === 'dark' ? 'is-active' : ''}`}
+              onClick={() => setDesignTheme('dark')}
+              aria-label="다크모드"
+              title="다크모드"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+              </svg>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            className="ui-tabs-trigger app-header-login"
+            onClick={() => setActiveView('login')}
+          >
+            로그인
+          </button>
         </div>
       </header>
       <Tabs value={activeView} onValueChange={setActiveView}>
-        <TabsList>
-          {visibleViews.map((view) => (
-            <TabsTrigger key={view.id} value={view.id}>
-              {view.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
+        {menuViews.length > 0 && (
+          <TabsList>
+            {menuViews.map((view) => (
+              <TabsTrigger key={view.id} value={view.id}>
+                {view.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        )}
         <TabsContent value="search">
           <section className="view-panel">
             <div className="view-layout">

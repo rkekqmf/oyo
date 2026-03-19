@@ -18,7 +18,7 @@ export const BOSS_CHECKLIST = [
     requiredEngravings: ['원한', '돌격대장', '아드레날린', '저주받은 인형'],
   },
   {
-    id: 'behemoth-normal',
+    id: 'behemoth-n',
     name: '베히모스',
     difficulty: '노말',
     minItemLevel: 1640,

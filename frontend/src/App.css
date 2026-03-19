@@ -1,6 +1,6 @@
-/* 롤업스 참조: 딥 포레스트 그린 하나 톤, 페인트 질감, 옆 톤과 잘 어울리게 */
+/* ??????: ???????? ?? ??? ?? ???????, ????? ??????? */
 body {
-  background: #2e4e3a;
+  background: var(--bg);
 }
 
 :root {
@@ -27,16 +27,22 @@ body {
   --subtitle: rgba(242, 244, 233, 0.85);
   --btn-cream: #f2f4e9;
   --btn-cream-border: rgba(242, 244, 233, 0.85);
-  /* 크림·녹색에 맞는 포인트 (밝지만 고급스러운 골드, hover/강조용) */
+  /* ??????????? ?????(??????????????, hover/???? */
   --point: #e0d4a8;
+  /* 아이콘/이미지 색상 반전(직업 아이콘 등)용 필터 */
+  --homework-class-img-filter: brightness(0) saturate(100%) invert(95%) sepia(5%) saturate(413%) hue-rotate(5deg)
+    brightness(106%) contrast(95%);
+  --efficiency-remote-btn-img-filter: brightness(0) saturate(100%) invert(95%) sepia(5%) saturate(413%) hue-rotate(5deg)
+    brightness(106%) contrast(95%);
   --homework-daily-color: #7cb87a;
   --homework-weekly-color: #3b82f6;
   --homework-raid-color: #ec4899;
+  --homework-bus-color: #b16bff;
   --homework-gold-color: #f6b326;
   --homework-bound-gold-color: #d2b075;
 }
 
-/* 페인트 스와치처럼: 각 영역이 드러나되, 선은 자로 잰 듯 딱딱하지 않게 */
+/* ????????????? ?????????????, ???? ??? ??????????? ??? */
 #root {
   position: relative;
   min-height: 100vh;
@@ -52,7 +58,7 @@ body {
   background-attachment: fixed;
 }
 
-/* 페인트로 칠한 느낌: 붓질 질감 유지 */
+/* ?????? ?? ???: ?? ?? ???? */
 #root::before {
   content: '';
   position: absolute;
@@ -65,7 +71,79 @@ body {
   pointer-events: none;
 }
 
-/* 전체 타이포 정책: bold 사용 안 함 */
+html[data-theme='light'] {
+  --bg: #f8fafc;
+  --bg-mid: #f1f5f9;
+  --bg-light: #ffffff;
+  --bg-dark: #f8fafc;
+
+  --point: var(--primary);
+
+  --surface: rgba(255, 255, 255, 0.96);
+  --surface-soft: rgba(241, 245, 249, 0.7);
+
+  --border: rgba(15, 23, 42, 0.12);
+  --border-strong: rgba(15, 23, 42, 0.2);
+
+  --text: #0f172a;
+  --muted: rgba(15, 23, 42, 0.62);
+
+  --title: #0f172a;
+  --subtitle: rgba(15, 23, 42, 0.75);
+
+  /* 탭/버튼 텍스트 대비를 위해 반전 */
+  --btn-cream: #0f172a;
+  --btn-cream-border: rgba(15, 23, 42, 0.15);
+
+  --homework-class-img-filter: none;
+  --efficiency-remote-btn-img-filter: none;
+}
+
+html[data-theme='light'] #root {
+  background-color: #ffffff;
+  background-image: none;
+}
+
+html[data-theme='light'] #root::before {
+  opacity: 0.16;
+  mix-blend-mode: multiply;
+}
+
+html[data-theme='dark'] {
+  --bg: #0b1220;
+  --bg-mid: #0f172a;
+  --bg-light: #111827;
+  --bg-dark: #0b1220;
+
+  --point: var(--primary);
+
+  --surface: rgba(15, 23, 42, 0.92);
+  --surface-soft: rgba(15, 23, 42, 0.65);
+
+  --border: rgba(148, 163, 184, 0.18);
+  --border-strong: rgba(148, 163, 184, 0.28);
+
+  --text: #e5e7eb;
+  --muted: rgba(229, 231, 235, 0.72);
+
+  --title: #f8fafc;
+  --subtitle: rgba(248, 250, 252, 0.78);
+
+  /* 기본 버튼/탭 대비 유지 */
+  --btn-cream: #f2f4e9;
+  --btn-cream-border: rgba(242, 244, 233, 0.22);
+}
+
+html[data-theme='dark'] #root {
+  background-color: #0b1220;
+  background-image: none;
+}
+
+html[data-theme='dark'] #root::before {
+  opacity: 0.28;
+}
+
+/* ??? ????? ???: bold ??? ????*/
 #root,
 #root * {
   font-weight: 400 !important;
@@ -179,7 +257,7 @@ body {
 .ui-badge {
   display: inline-flex;
   align-items: center;
-  border-radius: 999px;
+  border-radius: 8px;
   padding: 4px 10px;
   font-size: 12px;
   font-weight: 700;
@@ -229,7 +307,7 @@ body {
   margin: 0;
   font-size: 32px;
   color: var(--title);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .app-header p {
@@ -241,10 +319,34 @@ body {
 .app-logo {
   display: inline-flex;
   align-items: baseline;
-  letter-spacing: -0.02em;
+  gap: 0.2em;
+  letter-spacing: 0;
+  font-family: 'Noto Sans KR', 'Pretendard', Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-weight: 800;
+  font-stretch: 110%;
+  text-shadow:
+    1px 0 0 currentColor,
+    -1px 0 0 currentColor,
+    0 1px 0 currentColor,
+    0 -1px 0 currentColor,
+    0 0 10px rgba(0, 0, 0, 0.18);
+}
+.app-logo-letter {
+  display: inline-block;
 }
 .app-logo-o {
   color: var(--title);
+  font-family: 'Noto Sans KR', 'Pretendard', Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-weight: 800;
+  font-stretch: 110%;
+  -webkit-text-stroke: 0px transparent;
+  text-shadow:
+    1px 0 0 currentColor,
+    -1px 0 0 currentColor,
+    0 1px 0 currentColor,
+    0 -1px 0 currentColor,
+    0 0 10px rgba(0, 0, 0, 0.18);
+  transform: translateZ(0);
 }
 
 .app-header-inner {
@@ -252,22 +354,71 @@ body {
   user-select: none;
 }
 
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.app-header-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-header-login {
+  margin-left: 2px;
+}
+
+.app-theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-theme-btn {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--btn-cream-border);
+  background: transparent;
+  color: var(--btn-cream);
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.app-theme-btn:hover:not(:disabled) {
+  border-color: var(--point);
+  transform: translateY(-1px);
+}
+
+.app-theme-btn.is-active {
+  background: var(--btn-cream);
+  color: var(--bg-dark);
+}
+
 .ui-tabs-list {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 14px;
-  padding: 6px;
+  padding: 0;
   overflow-x: auto;
   scrollbar-gutter: stable;
-  background: var(--surface-soft);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
 
 .ui-tabs-trigger {
   border: 1px solid var(--btn-cream-border);
-  border-radius: 999px;
+  border-radius: 8px;
   background: transparent;
   color: var(--btn-cream);
   padding: 8px 14px;
@@ -317,7 +468,7 @@ body {
   max-width: 100%;
 }
 
-/* 공통: 좌측 본문 + 우측 리모컨 레이아웃 */
+/* ??: ?? ?? + ??? ?????????? */
 .view-layout {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -365,7 +516,7 @@ body {
   min-width: 0;
 }
 
-/* 숙제: 좌측 본문 + 우측 리모컨 */
+/* ???: ?? ?? + ??? ????*/
 .homework-layout {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -403,6 +554,7 @@ body {
   flex-direction: column;
   gap: 8px;
   align-items: stretch;
+  position: relative;
 }
 .homework-remote-actions .homework-toolbar-btn {
   width: 100%;
@@ -415,7 +567,7 @@ body {
   flex: 1;
 }
 
-/* 수익·효율: 좌측 본문(늘어남) + 우측 리모컨(필요 너비만) */
+/* ???????: ?? ??(????? + ??? ??????? ????? */
 .efficiency-layout {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -521,6 +673,7 @@ body {
   height: 24px;
   object-fit: contain;
   display: block;
+  filter: var(--efficiency-remote-btn-img-filter);
 }
 .efficiency-remote-btn-icon .efficiency-remote-btn-fallback {
   font-size: 13px;
@@ -639,7 +792,7 @@ body {
   color: var(--muted);
   background: transparent;
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: 8px;
   cursor: pointer;
 }
 
@@ -801,7 +954,7 @@ body {
   margin-bottom: 0;
 }
 
-/* 강화 재료·비용 직관 표시 (이미지 참고) */
+/* ?? ?????? ??? ??? (????? ??) */
 .efficiency-cost-breakdown {
   margin-top: 16px;
   padding: 12px 14px;
@@ -917,11 +1070,169 @@ body {
   }
 }
 
-/* 새 도메인 패널 공통 (점수·수익·전투 계산 등) */
+/* ?????????? ?? (??????????? ?? ?? */
 .oyo-panel {
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text);
+}
+
+.combat-calc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.combat-calc-item {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.combat-calc-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.combat-crit-layout {
+  display: grid;
+  grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.combat-crit-remote,
+.combat-crit-main {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  min-width: 0;
+}
+
+.combat-crit-remote {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.combat-crit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.combat-crit-field > span,
+.combat-crit-subtitle {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.combat-crit-field input,
+.combat-crit-field select {
+  width: 100%;
+  min-height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  padding: 0 10px;
+}
+
+.combat-crit-options {
+  display: grid;
+  gap: 6px;
+}
+
+.combat-crit-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.combat-crit-main {
+  display: grid;
+  gap: 10px;
+}
+
+.combat-crit-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.combat-crit-summary-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.combat-crit-summary-card h5 {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.combat-crit-summary-card strong {
+  font-size: 32px;
+  line-height: 1;
+  color: #b794f6;
+}
+
+.combat-crit-summary-card p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.combat-crit-detail-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.combat-crit-detail-card h5 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.combat-crit-detail-card ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.combat-crit-detail-card li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  padding-bottom: 4px;
+}
+
+@media (max-width: 980px) {
+  .combat-crit-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .combat-crit-summary-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .text-muted {
@@ -1009,7 +1320,7 @@ body {
 
 .recent-item-button {
   border: 1px solid var(--btn-cream-border);
-  border-radius: 999px;
+  border-radius: 8px;
   background: transparent;
   padding: 6px 10px;
   font-size: 13px;
@@ -1110,7 +1421,7 @@ body {
 
 .market-item-chip {
   border: 1px solid var(--btn-cream-border);
-  border-radius: 999px;
+  border-radius: 8px;
   background: transparent;
   color: var(--btn-cream);
   padding: 6px 10px;
@@ -1127,7 +1438,7 @@ body {
 
 .market-item-chip-remove {
   border: 1px solid var(--btn-cream-border);
-  border-radius: 999px;
+  border-radius: 8px;
   background: transparent;
   color: var(--btn-cream);
   width: 22px;
@@ -1327,7 +1638,7 @@ body {
 }
 
 .boss-check-badge {
-  border-radius: 999px;
+  border-radius: 8px;
   padding: 4px 10px;
   font-size: 12px;
   font-weight: 700;
@@ -1499,7 +1810,7 @@ body {
 }
 
 .result-refreshing {
-  border-radius: 999px;
+  border-radius: 8px;
   background: color-mix(in srgb, var(--primary) 14%, var(--surface));
   color: var(--primary-strong);
   font-size: 12px;
@@ -1745,7 +2056,7 @@ body {
 
 .modal-tab {
   border: 1px solid var(--btn-cream-border);
-  border-radius: 999px;
+  border-radius: 8px;
   background: transparent;
   color: var(--btn-cream);
   padding: 6px 12px;
@@ -1917,7 +2228,7 @@ body {
 .equipment-quality-bar {
   width: 72px;
   height: 7px;
-  border-radius: 999px;
+  border-radius: 8px;
   background: color-mix(in srgb, var(--border) 70%, transparent);
   overflow: visible;
   border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
@@ -2093,7 +2404,7 @@ body {
   border-radius: 10px;
   padding: 0;
   border: 2px solid color-mix(in srgb, var(--border) 92%, transparent);
-  background: #0b1220;
+  background: var(--bg-dark);
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
@@ -2110,7 +2421,7 @@ body {
   height: 100%;
   border-radius: 8px;
   border: 0;
-  background: #0f172a;
+  background: var(--bg-dark);
   position: relative;
   z-index: 2;
 }
@@ -2370,7 +2681,7 @@ body {
   color: var(--muted);
 }
 
-/* 숙제 패널 (캐릭터별) */
+/* ??? ??? (?????) */
 .homework-panel {
   display: block;
   width: 100%;
@@ -2448,12 +2759,34 @@ body {
   border: none;
   border-radius: 0;
   background: transparent;
+  height: 36px;
+  min-height: 36px;
+  justify-content: flex-start;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  position: relative;
 }
 .homework-toolbar-btn-register-trigger.is-open {
-  height: 30px;
-  min-height: 30px;
+  height: 36px;
+  min-height: 36px;
+  width: 100%;
   justify-content: flex-end;
-  padding: 0 8px;
+  padding: 0 12px;
+}
+.homework-register-trigger-label {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.12s ease;
+}
+.homework-toolbar-btn-register-trigger.is-open .homework-register-trigger-label {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 .homework-toolbar-btn-register:hover:not(:disabled),
 .homework-toolbar-btn-expedition:hover:not(:disabled) {
@@ -2475,7 +2808,7 @@ body {
   background: color-mix(in srgb, var(--danger-bg) 65%, transparent);
 }
 .homework-toolbar-btn-extra {
-  /* 기본 툴바 버튼 스타일 유지 */
+  /* ?? ??? ?? ?????????? */
 }
 .homework-toolbar-btn-order,
 .homework-toolbar-btn-graph-remote {
@@ -2491,6 +2824,13 @@ body {
 .homework-toolbar-btn-graph-remote svg {
   width: 21px;
   height: 21px;
+  margin: 0;
+  vertical-align: middle;
+  transform: translateY(0);
+}
+.homework-toolbar-btn-graph-remote > span {
+  line-height: 1;
+  transform: translateY(0);
 }
 .homework-toolbar-btn-order svg {
   width: 20px;
@@ -2550,10 +2890,17 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   font-size: 12px;
   font-weight: 600;
   color: var(--muted);
   user-select: none;
+}
+
+.homework-mode-switch-label svg {
+  width: 14px;
+  height: 14px;
+  display: block;
 }
 .homework-mode-switch.is-compact .homework-mode-switch-label.is-left,
 .homework-mode-switch.is-detailed .homework-mode-switch-label.is-right {
@@ -2623,6 +2970,12 @@ body {
   color: color-mix(in srgb, var(--text) 92%, #ffffff);
   flex-shrink: 0;
 }
+.homework-panel-compact .homework-expedition-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  font-size: 9px;
+}
 .homework-expedition-card .homework-char-level {
   font-size: 12px;
   color: var(--muted);
@@ -2656,13 +3009,13 @@ body {
 .homework-class-img {
   display: block;
   object-fit: cover;
-  filter: brightness(0) saturate(100%) invert(95%) sepia(5%) saturate(413%) hue-rotate(5deg) brightness(106%) contrast(95%);
+  filter: var(--homework-class-img-filter);
 }
 .homework-remote-search-item.is-added .homework-class-img {
-  filter: brightness(0) saturate(100%) invert(92%) sepia(15%) saturate(1145%) hue-rotate(175deg) brightness(98%) contrast(95%);
+  filter: var(--homework-class-img-filter);
 }
 .homework-remote-search-item.is-added .homework-class-fallback {
-  color: color-mix(in srgb, var(--point) 80%, var(--text));
+  color: var(--text);
 }
 .homework-class-fallback {
   align-items: center;
@@ -2776,7 +3129,7 @@ body {
   text-align: center;
   color: var(--muted);
 }
-/* 서버별 그룹 */
+/* ??????? */
 .homework-by-server {
   display: flex;
   flex-direction: column;
@@ -2800,11 +3153,11 @@ body {
   padding: 4px 0;
   border-bottom: 1px solid var(--border);
 }
-/* 기본 그리드(매asonry 아님 시) */
+/* ?? ?????asonry ??? ?? */
 .homework-char-grid {
   transition: opacity 0.4s ease;
 }
-/* 행 우선 그리드: 같은 행은 가장 긴 카드 기준으로 높이 맞춤 */
+/* ????? ???? ??? ???? ??????? ?????? ??? ?? */
 .homework-char-grid-masonry {
   display: flex;
   flex-direction: row;
@@ -2869,11 +3222,24 @@ body {
   border-radius: 6px;
   padding: 4px 8px;
 }
+.homework-panel-compact .homework-char-card-complete-overlay {
+  border-radius: 6px;
+}
 .homework-char-row-compact {
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+.homework-char-row-compact-top {
+  display: flex;
   align-items: center;
-  flex-wrap: nowrap;
+  justify-content: space-between;
   gap: 8px;
+}
+.homework-char-row-compact-bottom {
+  display: flex;
+  align-items: stretch;
 }
 .homework-char-compact-left {
   display: flex;
@@ -2886,14 +3252,31 @@ body {
 }
 .homework-panel-compact .homework-char-compact-left .homework-char-level {
   font-size: 11px;
+  white-space: nowrap;
+}
+.homework-panel-compact .homework-char-name-wrap {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.homework-char-compact-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.homework-panel-compact .homework-char-compact-actions .homework-char-compact-progress .homework-progress-ring {
+  width: 30px;
+  height: 30px;
 }
 .homework-char-compact-buttons {
-  flex: 1;
   display: flex;
   align-items: center;
   gap: 4px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  flex-wrap: wrap;
+  overflow: visible;
 }
 .homework-char-compact-actions {
   display: flex;
@@ -2901,11 +3284,41 @@ body {
   align-items: center;
   gap: 4px;
 }
+.homework-panel-compact .homework-char-compact-actions .homework-btn-icon {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  border-radius: 999px;
+  padding: 0;
+}
+.homework-panel-compact .homework-char-compact-actions .homework-btn-icon svg {
+  width: 14px;
+  height: 14px;
+}
 .homework-panel-compact .homework-btn-chip {
   white-space: nowrap;
-  padding-inline: 6px;
-  padding-block: 3px;
-  font-size: 11px;
+  padding-inline: 10px;
+  padding-block: 4px;
+  font-size: 10px;
+  border-radius: 8px;
+  line-height: 1.2;
+  min-height: 26px;
+}
+.homework-panel-compact .homework-btn-chip.homework-chip-daily.is-checked {
+  border-color: var(--homework-daily-color, #4a9c48);
+  background: color-mix(in srgb, var(--homework-daily-color, #4a9c48) 28%, transparent);
+  color: var(--text);
+}
+.homework-panel-compact .homework-btn-chip.homework-chip-weekly.is-checked {
+  border-color: var(--homework-weekly-color, #5b7fb8);
+  background: color-mix(in srgb, var(--homework-weekly-color, #5b7fb8) 28%, transparent);
+  color: var(--text);
+}
+.homework-panel-compact .homework-btn-chip.homework-chip-raid.is-checked {
+  border-color: var(--homework-raid-color, #b8860b);
+  background: color-mix(in srgb, var(--homework-raid-color, #b8860b) 28%, transparent);
+  color: var(--text);
 }
 .homework-char-header-actions {
   display: flex;
@@ -2916,6 +3329,11 @@ body {
 }
 .homework-char-header-actions .homework-btn-icon,
 .homework-card-graph-head-actions .homework-btn-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+}
+.homework-char-header-meta .homework-char-progress .homework-progress-ring {
   width: 28px;
   height: 28px;
 }
@@ -2942,10 +3360,6 @@ body {
   filter: blur(1.2px);
   opacity: 1;
 }
-.homework-char-card-wrap.is-complete-animating .homework-char-card {
-  border-color: color-mix(in srgb, var(--text) 30%, var(--border-strong));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--text) 26%, transparent);
-}
 .homework-char-card-wrap.is-sliding {
   transition: transform 0.9s cubic-bezier(0.25, 0.1, 0.25, 1);
   z-index: 10;
@@ -2965,10 +3379,14 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 14px;
-  background: rgba(0, 0, 0, 0.12);
+  /* 어두운 덩어리/블러 없이 체크만 카드 정중앙에 */
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   pointer-events: auto;
   cursor: pointer;
-  animation: homework-complete-overlay 0.16s ease-out both;
+  z-index: 4;
+  animation: homework-complete-overlay 0.38s ease-out both;
 }
 .homework-char-card-complete-check {
   display: inline-flex;
@@ -2977,13 +3395,30 @@ body {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: rgba(74, 156, 72, 0.95);
+  /* 버튼 면은 단색 — 밝기는 주변 글로우만 */
+  background: rgba(74, 156, 72, 0.92);
   color: #fff;
-  box-shadow: 0 0 20px rgba(74, 156, 72, 0.5);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.18),
+    0 0 6px 1px color-mix(in srgb, var(--homework-daily-color, #4a9c48) 38%, transparent),
+    0 0 14px 2px color-mix(in srgb, var(--homework-daily-color, #4a9c48) 26%, transparent);
+  animation: homework-complete-check-fade 0.36s ease-out 0.04s both;
 }
 .homework-char-card-complete-check svg {
   width: 32px;
   height: 32px;
+}
+.homework-panel-compact .homework-char-card-complete-check {
+  width: 42px;
+  height: 42px;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.16),
+    0 0 5px 1px color-mix(in srgb, var(--homework-daily-color, #4a9c48) 34%, transparent),
+    0 0 12px 2px color-mix(in srgb, var(--homework-daily-color, #4a9c48) 24%, transparent);
+}
+.homework-panel-compact .homework-char-card-complete-check svg {
+  width: 24px;
+  height: 24px;
 }
 @keyframes homework-complete-overlay {
   from {
@@ -2993,16 +3428,59 @@ body {
     opacity: 1;
   }
 }
+@keyframes homework-complete-check-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
 .homework-char-card {
   position: relative;
-  background: transparent;
-  border: 1px solid var(--border-strong);
-  transition: box-shadow 0.3s ease;
-  box-shadow: 0 0 8px rgba(234, 234, 222, 0.08), 0 0 4px rgba(242, 244, 233, 0.06);
+  border: none;
+  /* 왼쪽: border-radius를 따라 위·아래 모서리 곡선까지 이어짐 (하단 inset 라인과 동일한 느낌) */
+  border-left: 3px solid color-mix(in srgb, var(--text) 24%, transparent);
+  border-radius: 14px;
+  /* 레이드 행과 동일: 바깥 glow 없음, 하단은 inset으로 radius 따라감 */
+  background: color-mix(in srgb, var(--bg-mid) 24%, transparent);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--text) 12%, transparent);
+  transition:
+    background 0.18s ease,
+    box-shadow 0.18s ease,
+    /* 100% 전환 시 회색→초록이 한 줄로 스며들듯 (너비 애니로 끊기지 않음) */
+    border-left-color 0.48s cubic-bezier(0.25, 0.1, 0.25, 1);
   overflow-y: visible;
 }
 .homework-char-card.is-all-complete {
-  box-shadow: none;
+  /* border: none 금지 — 왼쪽 보더가 곡선 막대 */
+  isolation: isolate;
+  border-left-color: color-mix(in srgb, var(--homework-daily-color) 82%, transparent);
+  animation:
+    homework-card-complete-bg-in 0.42s ease-out forwards,
+    homework-card-complete-bottom-in 0.58s cubic-bezier(0.22, 1, 0.36, 1) 0.08s forwards;
+}
+/* 오버레이는 absolute 유지 */
+.homework-char-card > *:not(.homework-char-card-complete-overlay) {
+  position: relative;
+  z-index: 1;
+}
+@keyframes homework-card-complete-bottom-in {
+  from {
+    box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--text) 12%, transparent);
+  }
+  to {
+    box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--homework-daily-color) 34%, transparent);
+  }
+}
+/* 완료만 살짝 틴트 — 리셋 시 클래스 제거되면 기본 배경으로 transition */
+@keyframes homework-card-complete-bg-in {
+  from {
+    background: color-mix(in srgb, var(--bg-mid) 24%, transparent);
+  }
+  to {
+    background: color-mix(in srgb, var(--homework-daily-color) 11%, var(--bg-mid));
+  }
 }
 .homework-char-header {
   padding: 10px 12px 8px;
@@ -3114,6 +3592,10 @@ body {
   filter: drop-shadow(0 0 5px color-mix(in srgb, var(--homework-raid-color) 42%, transparent))
     drop-shadow(0 0 8px color-mix(in srgb, var(--homework-raid-color) 28%, transparent));
 }
+/* 카드 전체 완료 시 링 주변 녹색/금색 바깥 글로우는 카드 전체 그림자처럼 보이므로 끔 */
+.homework-char-card.is-all-complete .homework-progress-ring.is-complete svg {
+  filter: none !important;
+}
 .homework-char-class-logo {
   flex-shrink: 0;
   width: 36px;
@@ -3155,7 +3637,7 @@ body {
   height: 32px;
   padding: 0;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 999px;
   background: var(--surface);
   color: var(--muted);
   cursor: pointer;
@@ -3215,15 +3697,16 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding-top: 0;
+  padding-top: 0 !important;
   overflow-y: visible;
 }
 .homework-char-section {
   border: none;
   border-bottom: 1px solid var(--border);
   border-radius: 0;
-  padding: 10px 0;
+  padding: 8px 0;
   margin: 0;
+  position: relative;
 }
 .homework-char-section:last-child {
   border-bottom: none;
@@ -3234,14 +3717,14 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 .homework-char-section-head .homework-btn-icon {
   width: 24px;
   min-width: 24px;
   height: 24px;
   min-height: 24px;
-  border-radius: 7px;
+  border-radius: 999px;
 }
 .homework-char-section-head .ui-button {
   flex-shrink: 0;
@@ -3252,6 +3735,45 @@ body {
   display: inline-flex;
   align-items: center;
   line-height: 1;
+}
+.homework-char-section-compact.homework-section-daily,
+.homework-char-section-compact.homework-section-weekly,
+.homework-char-section.homework-section-raid {
+  border-bottom: none;
+  margin-bottom: 8px;
+  padding: 8px 10px 8px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg-mid) 18%, transparent);
+}
+.homework-char-section-compact.homework-section-daily::before,
+.homework-char-section-compact.homework-section-weekly::before,
+.homework-char-section.homework-section-raid::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 24%, transparent);
+}
+.homework-char-section-compact.homework-section-daily::before {
+  background: color-mix(in srgb, var(--homework-daily-color) 72%, transparent);
+}
+.homework-char-section-compact.homework-section-weekly::before {
+  background: color-mix(in srgb, var(--homework-weekly-color) 72%, transparent);
+}
+.homework-char-section.homework-section-raid::before {
+  background: color-mix(in srgb, var(--homework-raid-color) 72%, transparent);
+}
+.homework-char-section-compact.homework-section-daily .ui-card-description {
+  color: color-mix(in srgb, var(--homework-daily-color) 82%, var(--text));
+}
+.homework-char-section-compact.homework-section-weekly .ui-card-description {
+  color: color-mix(in srgb, var(--homework-weekly-color) 82%, var(--text));
+}
+.homework-char-section.homework-section-raid .ui-card-description {
+  color: color-mix(in srgb, var(--homework-raid-color) 82%, var(--text));
 }
 .homework-char-section-compact .homework-char-section-head {
   margin-bottom: 6px;
@@ -3291,8 +3813,59 @@ body {
   border-color: var(--homework-daily-color);
   background: color-mix(in srgb, var(--homework-daily-color) 28%, transparent);
 }
-.homework-raid-row-display.is-checked {
+
+/* 상세 섹션 체크 UI: 기존 칩 -> 왼쪽 인디케이터 리스트형 */
+.homework-char-section .homework-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.homework-char-section .homework-btn-chip {
+  position: relative;
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  padding: 8px 10px 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-mid) 24%, transparent);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--text) 12%, transparent);
+  transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.14s ease;
+}
+.homework-char-section .homework-btn-chip::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 24%, transparent);
+  transition: background 0.18s ease;
+}
+.homework-char-section .homework-btn-chip:hover {
+  background: color-mix(in srgb, var(--bg-mid) 36%, transparent);
+  transform: translateY(-1px);
+}
+.homework-panel-detailed .homework-char-section.homework-section-daily .homework-btn-chip.is-checked {
+  background: color-mix(in srgb, var(--homework-daily-color) 16%, var(--bg-mid));
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--homework-daily-color) 36%, transparent);
+  animation: homework-item-check-in 0.18s ease-out;
+}
+.homework-panel-detailed .homework-char-section.homework-section-daily .homework-btn-chip.is-checked::before {
+  background: color-mix(in srgb, var(--homework-daily-color) 82%, transparent);
+}
+.homework-panel-detailed .homework-char-section.homework-section-weekly .homework-btn-chip.is-checked {
+  background: color-mix(in srgb, var(--homework-weekly-color) 16%, var(--bg-mid));
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--homework-weekly-color) 36%, transparent);
+  animation: homework-item-check-in 0.18s ease-out;
+}
+.homework-panel-detailed .homework-char-section.homework-section-weekly .homework-btn-chip.is-checked::before {
+  background: color-mix(in srgb, var(--homework-weekly-color) 82%, transparent);
+}
+.homework-panel-detailed .homework-raid-row-display.is-checked {
   background: color-mix(in srgb, var(--homework-raid-color) 20%, transparent);
+  animation: homework-item-check-in 0.18s ease-out;
 }
 .homework-raid-section {
   border-bottom: 1px solid var(--border);
@@ -3300,13 +3873,6 @@ body {
 }
 .homework-raid-section .homework-char-section-head {
   margin-bottom: 8px;
-}
-.homework-char-section.homework-section-raid:last-child {
-  padding-bottom: 14px;
-}
-.homework-char-section.homework-raid-section {
-  padding-bottom: 24px !important;
-  overflow: visible;
 }
 .homework-raid-actions {
   display: flex;
@@ -3325,7 +3891,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 0 0 20px !important;
 }
 .homework-raid-row {
   display: flex;
@@ -3359,21 +3924,32 @@ body {
   padding: 0 8px;
   display: flex;
   flex-direction: column;
-  gap: 0;
   width: 100%;
   box-sizing: border-box;
   max-height: 0;
   opacity: 0;
   overflow: hidden;
-  transform: translateY(-10px);
-  transition: max-height 0.56s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.34s ease, padding 0.34s ease, transform 0.52s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(-8px);
+  transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.26s ease, transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), padding 0.26s ease;
 }
 .homework-remote-register.is-open {
-  max-height: 1600px;
-  opacity: 1;
+  max-height: 3200px;
   padding: 8px;
+  opacity: 1;
   overflow: visible;
   transform: translateY(0);
+}
+.homework-remote-register.is-closing {
+  overflow: hidden;
+  pointer-events: none;
+  transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), padding 0.2s ease;
+}
+.homework-remote-register-body {
+  min-height: 0;
+  overflow: hidden;
+}
+.homework-remote-register.is-open .homework-remote-register-body {
+  overflow: visible;
 }
 .homework-remote-register-row {
   display: flex;
@@ -3381,11 +3957,22 @@ body {
   align-items: stretch;
   gap: 6px;
   width: 100%;
+  padding: 1px 0;
 }
 .homework-remote-register-input {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  border-color: var(--border);
+  background: var(--surface);
+}
+.homework-remote-register-input:focus {
+  border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+  outline: none;
+}
+.homework-remote-register-input::placeholder {
+  color: color-mix(in srgb, var(--text) 82%, var(--bg));
+  opacity: 0.9;
 }
 .homework-toolbar-btn-remote-search {
   width: 100%;
@@ -3397,47 +3984,118 @@ body {
 }
 .homework-remote-search-results {
   list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  animation: homework-remote-results-reveal 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  max-height: 240px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.homework-remote-search-results::-webkit-scrollbar {
+  display: none;
+}
+.homework-remote-search-server-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.homework-remote-search-server-head {
+  font-size: 10px;
+  color: var(--muted);
+  padding: 0 2px 2px;
+  letter-spacing: 0.04em;
+}
+.homework-remote-search-server-list {
+  list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  animation: homework-remote-results-reveal 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  gap: 3px;
+  width: 100%;
+  box-sizing: border-box;
 }
 .homework-remote-search-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
   min-width: 0;
-  padding: 5px 6px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg-mid);
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  padding: 6px 6px 6px 10px;
+  border: none;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-mid) 28%, transparent);
   cursor: pointer;
-  opacity: 0;
-  transform: translateY(-4px);
-  animation: homework-remote-item-reveal 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: calc(var(--result-index, 0) * 24ms);
+  opacity: 1;
+  transform: none;
+  animation: none;
+  transition: background 0.18s ease, transform 0.14s ease;
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--text) 14%, transparent);
+}
+.homework-remote-search-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 24%, transparent);
+}
+.homework-remote-search-item:hover {
+  background: color-mix(in srgb, var(--bg-mid) 40%, transparent);
+  transform: translateY(-1px);
+}
+.homework-remote-search-text {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 .homework-remote-search-item .homework-class-icon-wrap {
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  border: none !important;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none !important;
+  transition: none;
+}
+.homework-remote-search-item.is-added {
+  background: color-mix(in srgb, var(--primary) 8%, var(--bg-mid));
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--primary) 34%, transparent);
+  animation: homework-item-check-in 0.2s ease-out;
+}
+.homework-remote-search-item.is-added::before {
+  background: color-mix(in srgb, var(--primary) 82%, transparent);
 }
 .homework-remote-search-item.is-added .homework-class-icon-wrap {
-  border-color: color-mix(in srgb, var(--point) 64%, var(--border));
-  background: color-mix(in srgb, var(--point) 16%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--point) 36%, transparent);
+  border: none !important;
+  background: transparent;
+  box-shadow: none;
 }
 .homework-remote-search-added-mark {
   width: 16px;
   height: 16px;
-  border-radius: 999px;
+  border-radius: 8px;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid color-mix(in srgb, var(--point) 55%, var(--border));
-  background: color-mix(in srgb, var(--point) 22%, transparent);
-  color: color-mix(in srgb, var(--point) 86%, #fff);
+  border: 1px solid color-mix(in srgb, var(--primary) 55%, var(--border));
+  background: color-mix(in srgb, var(--primary) 22%, transparent);
+  color: color-mix(in srgb, var(--primary) 90%, #fff);
 }
 .homework-remote-search-name {
   flex: 1;
@@ -3446,11 +4104,24 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--text);
 }
 .homework-remote-search-level {
   font-size: 11px;
   color: var(--muted);
   flex-shrink: 0;
+  white-space: nowrap;
+}
+.homework-remote-search-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--primary);
+}
+.homework-remote-search-check svg {
+  width: 14px;
+  height: 14px;
 }
 .homework-remote-search-exp-level {
   font-size: 10px;
@@ -3461,25 +4132,107 @@ body {
   flex: 1;
   min-width: 0;
 }
+/* 레이드명 바로 옆에 버스/싱글 뱃지 오게 (row-main 안에서는 레이블이 공간 안 먹음) */
+.homework-raid-row-display .homework-raid-row-main .homework-item-label {
+  flex: 0 1 auto;
+}
 .homework-raid-row-display {
+  position: relative;
   flex-direction: column;
   align-items: stretch;
+  justify-content: center;
   gap: 4px;
-  padding: 6px 10px;
+  padding: 6px 10px 6px 12px;
   min-height: 0;
-  border: 1px solid var(--border);
+  border: none;
   border-radius: 9px;
-  background: transparent;
+  background: color-mix(in srgb, var(--bg-mid) 24%, transparent);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--text) 12%, transparent);
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+  transition: background 0.18s ease, transform 0.14s ease, box-shadow 0.18s ease;
+}
+.homework-raid-row-display::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 24%, transparent);
+  transition: background 0.18s ease;
+}
+.homework-raid-row-display.is-nonbus {
+  min-height: 28px;
 }
 .homework-raid-row-display:hover {
-  border-color: color-mix(in srgb, var(--homework-daily-color) 42%, var(--border));
-  background: color-mix(in srgb, var(--homework-daily-color) 14%, transparent);
+  background: color-mix(in srgb, var(--bg-mid) 38%, transparent);
+  transform: translateY(-1px);
 }
 .homework-raid-row-display.is-checked {
-  border-color: var(--homework-daily-color);
-  background: color-mix(in srgb, var(--homework-daily-color) 22%, transparent);
+  background: color-mix(in srgb, var(--homework-raid-color) 14%, var(--bg-mid));
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--homework-raid-color) 34%, transparent);
+  animation: homework-item-check-in 0.18s ease-out;
+}
+.homework-raid-row-display.is-checked::before {
+  background: color-mix(in srgb, var(--homework-raid-color) 82%, transparent);
+}
+@keyframes homework-item-check-in {
+  from {
+    transform: translateY(1px) scale(0.995);
+    filter: saturate(0.92);
+  }
+  to {
+    transform: translateY(0) scale(1);
+    filter: saturate(1);
+  }
+}
+/* 레이드 행 3줄 구조: 1줄 제목+입장레벨+태그, 2줄 골드, 3줄 버스비+총 */
+.homework-raid-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 0;
+  line-height: 1.35;
+}
+.homework-raid-line-head {
+  flex-wrap: nowrap;
+  min-width: 0;
+  justify-content: space-between;
+  width: 100%;
+}
+.homework-raid-line-head-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 0;
+}
+.homework-raid-title {
+  font-size: 12px;
+  color: var(--text);
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.homework-raid-entry-level {
+  font-size: 11px;
+  color: var(--muted);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.homework-raid-line-gold {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.35;
+  flex-shrink: 0;
 }
 .homework-card-graph-weekly-hint {
   display: flex;
@@ -3491,7 +4244,7 @@ body {
   font-size: 10px;
   color: var(--text-soft);
   border: 1px solid color-mix(in srgb, var(--border) 92%, transparent);
-  border-radius: 999px;
+  border-radius: 8px;
   padding: 1px 7px;
   background: color-mix(in srgb, var(--bg-mid) 84%, transparent);
 }
@@ -3538,23 +4291,30 @@ body {
   justify-content: space-between;
   gap: 8px;
   width: 100%;
-  flex-wrap: wrap;
-  row-gap: 4px;
+  flex-wrap: nowrap;
+  min-height: 0;
+  line-height: 1.35;
 }
 .homework-raid-row-main {
   display: flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
-  flex: 1 1 220px;
+  flex: 1 1 0;
+  justify-content: flex-start;
 }
 .homework-raid-row-main .homework-item-label {
   min-width: 0;
   font-size: 12px;
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   word-break: keep-all;
+  line-height: inherit;
+}
+.homework-raid-row-display .homework-raid-gold {
+  align-self: center;
+  line-height: inherit;
 }
 .homework-raid-gold {
   display: flex;
@@ -3590,43 +4350,45 @@ body {
   align-items: center;
   gap: 4px;
   font-size: 12px;
+  margin: 0;
+  min-width: 0;
+  flex-shrink: 0;
 }
 .homework-raid-busfee-label {
   color: var(--muted);
   flex-shrink: 0;
 }
 .homework-raid-busfee-input {
-  width: 64px;
-  height: 28px;
-  padding: 0 6px;
-  font-size: 12px;
+  width: 54px;
+  height: 24px;
+  padding: 0 5px;
+  font-size: 11px;
   line-height: 1.2;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 5px;
   background: var(--bg);
   color: var(--homework-gold-color);
 }
 .homework-raid-busfee-input::placeholder {
-  color: color-mix(in srgb, var(--text) 78%, var(--bg));
+  color: color-mix(in srgb, var(--text) 82%, var(--bg));
+  opacity: 0.85;
 }
 .homework-raid-busfee-input:focus {
   outline: none;
-  border-color: var(--border-strong);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--border-strong) 22%, transparent);
-}
-.homework-raid-busfee-unit {
-  color: var(--homework-gold-color);
-  flex-shrink: 0;
+  border-color: color-mix(in srgb, var(--homework-bus-color) 55%, var(--border));
+  box-shadow: none;
 }
 .homework-raid-busfee-wrap {
   display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   border: 1px solid transparent;
   border-radius: 8px;
   padding: 0;
-  margin-top: 2px;
+  margin-top: 0;
+  margin-left: -4px;
+  width: 100%;
 }
 .homework-raid-busfee-wrap.is-attention {
   border-color: transparent;
@@ -3634,8 +4396,9 @@ body {
   animation: none;
 }
 .homework-raid-busfee-wrap.is-attention .homework-raid-busfee-input {
-  border-color: color-mix(in srgb, var(--danger-text) 72%, transparent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger-bg) 45%, transparent);
+  border-color: color-mix(in srgb, var(--homework-bus-color) 82%, var(--danger-text));
+  box-shadow: none;
+  background: var(--bg);
 }
 .homework-raid-busfee-input.is-attention {
   animation: homework-busfee-shake 0.3s ease;
@@ -3646,33 +4409,42 @@ body {
   gap: 6px;
   font-size: 12px;
 }
+/* 버스비 input + 기사/승객 한 줄, 왼쪽 정렬 (기사/승객 먼저, 그 다음 버스비) */
 .homework-raid-busrow-inline {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 6px;
   width: 100%;
+  flex-wrap: nowrap;
 }
 .homework-raid-busrole-switch {
   position: relative;
-  width: 104px;
-  height: 28px;
+  width: 70px;
+  height: 24px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--homework-daily-color) 40%, var(--border));
-  background: color-mix(in srgb, var(--homework-daily-color) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--homework-raid-color) 56%, var(--border));
+  background: color-mix(in srgb, var(--homework-raid-color) 16%, transparent);
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: stretch;
   overflow: hidden;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.homework-raid-busrole-switch > * {
+  min-width: 0;
 }
 .homework-raid-busrole-thumb {
   position: absolute;
-  top: 2px;
-  bottom: 2px;
-  left: 2px;
-  width: calc(50% - 2px);
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 50%;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--homework-daily-color) 26%, transparent);
+  background: color-mix(in srgb, var(--homework-raid-color) 42%, transparent);
   transition: transform 0.2s ease;
+  pointer-events: none;
 }
 .homework-raid-busrole-switch.is-passenger .homework-raid-busrole-thumb {
   transform: translateX(100%);
@@ -3680,18 +4452,44 @@ body {
 .homework-raid-busrole-opt {
   position: relative;
   z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--text);
   font-size: 11px;
-  line-height: 1;
+  line-height: 24px;
+  text-align: center;
   white-space: nowrap;
   cursor: pointer;
+  box-sizing: border-box;
+}
+.homework-raid-busrole-opt:focus {
+  outline: none;
+}
+.homework-raid-busrole-opt:focus-visible {
+  outline: 2px solid var(--border-strong);
+  outline-offset: -2px;
 }
 .homework-raid-total-gold {
   font-size: 12px;
   color: var(--text);
-  line-height: 1.2;
+  line-height: 1.35;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  justify-content: flex-end;
+  width: 100%;
+  text-align: right;
+  align-self: flex-end;
 }
 .homework-raid-total-gold strong {
   color: var(--homework-gold-color);
@@ -3701,21 +4499,40 @@ body {
   color: var(--homework-gold-color);
 }
 .homework-raid-badge {
-  font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 8px;
   flex-shrink: 0;
   background: var(--bg-light);
   color: var(--text);
   border: 1px solid var(--border);
-}
-.homework-raid-badge-single {
-  border-color: var(--homework-daily-color);
-  background: color-mix(in srgb, var(--homework-daily-color) 18%, transparent);
+  font-weight: 600;
+  letter-spacing: -0.005em;
 }
 .homework-raid-badge-bus {
-  border-color: var(--homework-daily-color);
-  background: color-mix(in srgb, var(--homework-daily-color) 12%, transparent);
+  --badge-accent: var(--homework-bus-color);
+  border-color: color-mix(in srgb, var(--badge-accent) 70%, var(--border));
+  background: color-mix(in srgb, var(--badge-accent) 16%, transparent);
+}
+.homework-raid-badge-diff-single {
+  --badge-accent: var(--homework-raid-color);
+  border-color: color-mix(in srgb, var(--badge-accent) 70%, var(--border));
+  background: color-mix(in srgb, var(--badge-accent) 16%, transparent);
+}
+.homework-raid-badge-diff-normal {
+  --badge-accent: var(--homework-raid-color);
+  border-color: color-mix(in srgb, var(--badge-accent) 70%, var(--border));
+  background: color-mix(in srgb, var(--badge-accent) 16%, transparent);
+}
+.homework-raid-badge-diff-hard {
+  --badge-accent: var(--homework-raid-color);
+  border-color: color-mix(in srgb, var(--badge-accent) 70%, var(--border));
+  background: color-mix(in srgb, var(--badge-accent) 16%, transparent);
+}
+.homework-raid-badge-diff-nightmare {
+  --badge-accent: var(--homework-raid-color);
+  border-color: color-mix(in srgb, var(--badge-accent) 70%, var(--border));
+  background: color-mix(in srgb, var(--badge-accent) 16%, transparent);
 }
 @keyframes homework-busfee-shake {
   0% { transform: translateY(0); }
@@ -3730,13 +4547,18 @@ body {
   flex-shrink: 0;
 }
 .homework-raid-mode-btn {
-  padding: 4px 8px;
-  font-size: 11px;
-  border-radius: 6px;
+  height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  --diff-accent: var(--primary);
   transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
 .homework-raid-mode-btn:hover {
@@ -3744,9 +4566,67 @@ body {
   background: var(--bg-light);
 }
 .homework-raid-mode-btn.is-active {
-  border-color: var(--primary);
-  background: rgba(124, 184, 122, 0.25);
+  border-color: var(--diff-accent);
+  background: color-mix(in srgb, var(--diff-accent) 38%, transparent);
   color: var(--text);
+  /* 체크 효과는 '선/배경 변화' 정도로만, 폰트 bold/강한 그림자는 제거 */
+}
+
+.homework-raid-row.is-checked .homework-raid-badge {
+  border-color: color-mix(in srgb, var(--badge-accent, var(--homework-raid-color)) 70%, var(--border));
+  background: color-mix(in srgb, var(--badge-accent, var(--homework-raid-color)) 16%, transparent);
+}
+.homework-raid-mode-btn-diff-single {
+  --diff-accent: var(--homework-raid-color);
+  border-color: color-mix(in srgb, var(--diff-accent) 62%, var(--border));
+  background: color-mix(in srgb, var(--diff-accent) 12%, transparent);
+}
+.homework-raid-mode-btn-diff-normal {
+  --diff-accent: var(--homework-raid-color);
+  border-color: color-mix(in srgb, var(--diff-accent) 64%, var(--border));
+  background: color-mix(in srgb, var(--diff-accent) 13%, transparent);
+}
+.homework-raid-mode-btn-diff-hard {
+  --diff-accent: var(--homework-raid-color);
+  border-color: color-mix(in srgb, var(--diff-accent) 66%, var(--border));
+  background: color-mix(in srgb, var(--diff-accent) 14%, transparent);
+}
+.homework-raid-mode-btn-diff-nightmare {
+  --diff-accent: var(--homework-raid-color);
+  border-color: color-mix(in srgb, var(--diff-accent) 68%, var(--border));
+  background: color-mix(in srgb, var(--diff-accent) 15%, transparent);
+}
+.homework-raid-mode-btn-bus {
+  --diff-accent: var(--homework-bus-color);
+  border-color: color-mix(in srgb, var(--diff-accent) 65%, var(--border));
+  background: color-mix(in srgb, var(--diff-accent) 14%, transparent);
+}
+.homework-raid-mode-btn.is-disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  background: color-mix(in srgb, var(--bg) 84%, var(--danger-bg));
+}
+.homework-raid-mode-btn.is-denied {
+  border-color: var(--danger-text);
+  background: color-mix(in srgb, var(--danger-bg) 45%, transparent);
+  animation: homework-click-denied-shake 0.18s ease;
+}
+@keyframes homework-click-denied-shake {
+  0% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-1px);
+  }
+  50% {
+    transform: translateX(1px);
+  }
+  75% {
+    transform: translateX(-0.5px);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 .homework-raid-empty {
   margin: 0;
@@ -3756,7 +4636,7 @@ body {
   list-style: none;
 }
 .homework-raid-modal {
-  max-width: 320px;
+  max-width: 380px;
 }
 .homework-raid-modal-row.is-selected {
   background: rgba(124, 184, 122, 0.2);
@@ -3767,12 +4647,37 @@ body {
   gap: 8px;
   margin-bottom: 12px;
 }
+
+.homework-raid-modal-category-head {
+  margin: 10px 0 6px 0;
+  padding: 6px 10px 2px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  cursor: default;
+  border-top: 1px solid var(--border);
+}
+
+.homework-card-edit-modal .homework-raid-modal-category-head {
+  border-top: none;
+}
+
 .homework-raid-modal-list {
   list-style: none;
   margin: 0 0 16px 0;
   padding: 0;
   max-height: 50vh;
   overflow-y: auto;
+}
+.homework-raid-modal-list::-webkit-scrollbar {
+  width: 10px;
+}
+.homework-raid-modal-row {
+  background: color-mix(in srgb, var(--bg-mid) 70%, transparent);
+}
+.homework-raid-modal-row:hover {
+  border-color: var(--border-strong);
 }
 .homework-raid-modal-row {
   display: flex;
@@ -3800,6 +4705,310 @@ body {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+.homework-card-edit-modal .homework-card-edit-section {
+  margin-bottom: 20px;
+}
+.homework-card-edit-modal .homework-card-edit-section:last-of-type {
+  margin-bottom: 16px;
+}
+.homework-card-edit-modal .homework-card-edit-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: var(--text);
+}
+.homework-card-edit-modal .homework-raid-modal-list {
+  margin-bottom: 0;
+  max-height: none;
+  overflow: visible;
+}
+.homework-card-edit-modal .modal-content {
+  max-height: 72vh;
+  overflow-y: auto;
+  padding-bottom: 60px;
+  display: block;
+  min-height: 0;
+}
+.homework-card-edit-modal .homework-raid-modal-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  padding-top: 10px;
+  justify-content: center;
+  align-items: center;
+  background: var(--bg);
+  border-top: none;
+}
+
+.homework-card-edit-modal .homework-card-edit-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.homework-card-edit-modal .modal-content {
+  padding-bottom: 0;
+}
+
+/* 편집 모달: 상/하 고정 + "레이드" 섹션만 스크롤 */
+.homework-card-edit-modal .modal-content > .homework-card-edit-section {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+.homework-card-edit-modal .modal-content > .homework-card-edit-section:nth-of-type(2) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.homework-card-edit-modal .modal-content > .homework-card-edit-section:nth-of-type(2) .homework-raid-modal-list {
+  overflow-y: visible !important;
+  max-height: none !important;
+}
+.homework-card-edit-modal .modal-content > .homework-card-edit-section:nth-of-type(1) .homework-raid-modal-list {
+  overflow-y: visible;
+  max-height: none;
+}
+
+.homework-card-edit-modal .homework-raid-modal-list {
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-mid) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  padding: 10px 10px;
+}
+
+.homework-card-edit-modal .homework-raid-modal-list::-webkit-scrollbar {
+  width: 10px;
+}
+.homework-card-edit-modal .homework-raid-modal-list::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--primary) 25%, transparent);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.homework-edit-header.modal-header {
+  align-items: center;
+}
+
+.homework-edit-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.homework-edit-hero .homework-edit-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* 편집 모달 UX: 상단 캐릭터/하단 버튼 고정, 가운데(주간+레이드)만 스크롤 */
+.homework-card-edit-modal {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.homework-card-edit-modal .modal-content {
+  flex: 1 1 auto;
+  overflow-y: auto !important;
+  max-height: none !important;
+  padding-bottom: 0 !important;
+}
+
+.homework-card-edit-modal .homework-raid-modal-actions {
+  position: static !important;
+  border-top: none !important;
+  flex: 0 0 auto;
+}
+
+/* 레이드 리스트는 모달 스크롤을 공유 (내부 스크롤 제거) */
+.homework-card-edit-modal .homework-raid-modal-list {
+  max-height: none !important;
+  overflow-y: visible !important;
+}
+
+/* [최종 오버라이드] 편집 모달: 헤더/취소저장 고정, 주간+레이드만 스크롤 */
+.homework-card-edit-modal {
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+.homework-card-edit-modal .modal-content {
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  padding-bottom: 0 !important;
+}
+.homework-card-edit-modal .homework-raid-modal-actions {
+  position: static !important;
+  flex: 0 0 auto !important;
+  z-index: 8;
+}
+.homework-modal-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #ef4444 40%, var(--border));
+  background: color-mix(in srgb, #ef4444 34%, transparent);
+  backdrop-filter: blur(2px);
+  color: #ffecec;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.2);
+  z-index: 60;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.homework-global-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  z-index: 60;
+}
+.homework-card-edit-modal .homework-raid-modal-list {
+  overflow-y: visible !important;
+  max-height: none !important;
+}
+
+/* 편집 모달 디자인 정리 */
+.homework-card-edit-modal .homework-card-edit-section {
+  position: relative;
+  padding: 10px 10px 8px 10px;
+  border-radius: 12px;
+  background: transparent;
+  box-shadow: none;
+}
+.homework-card-edit-modal .modal-content > .homework-card-edit-section:nth-of-type(1) {
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+}
+.homework-card-edit-modal .modal-content > .homework-card-edit-section:nth-of-type(2) {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.homework-card-edit-modal .modal-content > .homework-card-edit-section:nth-of-type(1) .homework-card-edit-section-title {
+  color: color-mix(in srgb, var(--homework-weekly-color) 84%, var(--text));
+}
+.homework-card-edit-modal .modal-content > .homework-card-edit-section:nth-of-type(2) .homework-card-edit-section-title {
+  color: color-mix(in srgb, var(--homework-raid-color) 84%, var(--text));
+}
+.homework-card-edit-modal .modal-content > .homework-card-edit-section:nth-of-type(1) .homework-raid-modal-row.is-selected {
+  background: color-mix(in srgb, var(--homework-weekly-color) 16%, var(--bg-mid)) !important;
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--homework-weekly-color) 36%, transparent);
+}
+.homework-card-edit-modal .modal-content > .homework-card-edit-section:nth-of-type(1) .homework-raid-modal-row.is-selected::before {
+  background: color-mix(in srgb, var(--homework-weekly-color) 82%, transparent);
+}
+.homework-card-edit-modal .modal-content > .homework-card-edit-section:nth-of-type(2) .homework-raid-modal-row.is-selected {
+  background: color-mix(in srgb, var(--homework-raid-color) 16%, var(--bg-mid)) !important;
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--homework-raid-color) 36%, transparent);
+}
+.homework-card-edit-modal .modal-content > .homework-card-edit-section:nth-of-type(2) .homework-raid-modal-row.is-selected::before {
+  background: color-mix(in srgb, var(--homework-raid-color) 82%, transparent);
+}
+.homework-card-edit-modal .modal-content > .homework-card-edit-section:nth-of-type(2) .homework-raid-modal-category-head {
+  color: var(--muted);
+}
+.homework-card-edit-modal .modal-content {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text) 34%, transparent) transparent;
+}
+.homework-card-edit-modal .modal-content::-webkit-scrollbar {
+  width: 10px;
+}
+.homework-card-edit-modal .modal-content::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--bg-mid) 24%, transparent);
+  border-radius: 999px;
+}
+.homework-card-edit-modal .modal-content::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text) 28%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.homework-card-edit-modal .modal-content::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, #c084fc 38%, var(--text));
+  background-clip: content-box;
+}
+.homework-card-edit-modal .homework-raid-modal-list {
+  border: none !important;
+  background: transparent !important;
+  padding: 4px 0 !important;
+}
+.homework-card-edit-modal .homework-raid-modal-category-head {
+  margin: 6px 0 4px 0;
+  padding: 4px 10px 1px 10px;
+}
+.homework-card-edit-modal .homework-raid-modal-list > .homework-raid-modal-category-head:first-child {
+  margin-top: 0;
+}
+.homework-card-edit-modal .homework-raid-modal-row {
+  position: relative;
+  border: none !important;
+  background: color-mix(in srgb, var(--bg-mid) 28%, transparent) !important;
+  border-radius: 8px;
+  padding: 8px 8px 8px 12px;
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--text) 12%, transparent);
+  transition: background 0.22s ease, box-shadow 0.22s ease, transform 0.18s ease;
+}
+.homework-card-edit-modal .homework-raid-modal-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 26%, transparent);
+  transition: background 0.22s ease;
+}
+.homework-card-edit-modal .homework-raid-modal-row:hover {
+  border-color: transparent !important;
+  background: color-mix(in srgb, var(--bg-mid) 38%, transparent) !important;
+  transform: translateY(-1px);
+}
+.homework-card-edit-modal .homework-raid-modal-row:nth-of-type(even) {
+  background: color-mix(in srgb, var(--bg-mid) 22%, transparent) !important;
+}
+.homework-card-edit-modal .homework-raid-modal-row.is-selected::before {
+  background: color-mix(in srgb, var(--primary) 82%, transparent);
+}
+.homework-card-edit-modal .homework-raid-modal-row.is-selected {
+  background: color-mix(in srgb, var(--primary) 14%, var(--bg-mid)) !important;
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--primary) 32%, transparent);
+}
+.homework-card-edit-modal .homework-raid-mode-btn {
+  border: none !important;
+  box-shadow: none !important;
+  background: color-mix(in srgb, var(--bg-light) 72%, transparent);
+  transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.14s ease, opacity 0.16s ease;
+}
+.homework-card-edit-modal .homework-raid-mode-btn:hover {
+  transform: translateY(-1px);
+}
+.homework-card-edit-modal .homework-raid-mode-btn.is-active {
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--diff-accent) 58%, transparent) !important;
+  transform: translateY(-0.5px);
+}
+.homework-card-edit-modal .homework-raid-mode-btn.is-denied {
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--danger-text) 92%, transparent) !important;
+  background: color-mix(in srgb, var(--danger-bg) 52%, transparent) !important;
+}
+
+.homework-edit-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.homework-edit-level {
+  font-size: 12px;
+  color: var(--muted);
 }
 .homework-order-modal-list {
   list-style: none;
@@ -3922,7 +5131,7 @@ body {
 .homework-order-modal-list-draggable .homework-order-modal-row:active {
   cursor: grabbing;
 }
-/* 삽입 구간: 행 사이 14px 간격 정중앙에 선 표시 (위쪽 행 margin에 겹치게) */
+/* ??? ??: ????? 14px ?? ?????? ????? (??? ??margin?????? */
 .homework-order-modal-insert-gap {
   list-style: none;
   height: 14px;
@@ -3970,7 +5179,7 @@ body {
 .homework-order-modal-row.is-exp-fixed .homework-order-modal-drag-handle {
   display: none;
 }
-/* 드래그 중인 행: 자리 유지(높이 그대로), 내용만 비움 → 다른 행이 움직이지 않아 요동 없음 */
+/* ??????? ?? ??? ????(??? ?????, ???????? ????? ??? ????? ??? ??? ??? */
 .homework-order-modal-row.is-dragging.is-placeholder {
   pointer-events: none;
   cursor: default;
@@ -4001,7 +5210,7 @@ body {
   overflow: visible;
 }
 
-/* 카드 뒤집기: 3D 대신 페이드+스케일로 보더 잘림 없음, 같은 행 높이 맞춤 */
+/* ?? ????? 3D ???????????????? ?? ??? ???, ??? ????? ?? */
 .homework-char-grid-masonry .homework-card-flip-wrap {
   flex-shrink: 0;
   align-self: stretch;
@@ -4086,6 +5295,9 @@ body {
   border: 1px solid var(--border-strong);
   box-sizing: border-box;
   overflow-y: visible;
+  /* 앞면 숙제 카드용 inset/틴트는 뒷면에 적용하지 않음 */
+  background: var(--surface);
+  box-shadow: none;
 }
 .homework-card-flip-back .homework-card-graph-back {
   flex: 1;
@@ -4095,7 +5307,7 @@ body {
 .homework-card-graph-back .homework-char-header {
   flex-direction: column;
   align-items: stretch;
-  gap: 8px;
+  gap: 4px;
 }
 .homework-card-graph-back .homework-char-title {
   flex: 1;
@@ -4210,7 +5422,9 @@ body {
   border-color: rgba(124, 184, 122, 0.65);
 }
 .homework-card-daily-cell.is-half {
-  background: linear-gradient(90deg, rgba(124, 184, 122, 0.86) 50%, rgba(234, 234, 222, 0.12) 50%);
+  background:
+    repeating-linear-gradient(135deg, rgba(124, 184, 122, 0.72) 0 3px, rgba(124, 184, 122, 0.35) 3px 6px),
+    rgba(234, 234, 222, 0.12);
   border-color: color-mix(in srgb, var(--homework-daily-color) 45%, var(--border));
 }
 .homework-card-daily-cell.is-miss {
@@ -4281,7 +5495,7 @@ body {
   flex: 1;
   max-width: 6px;
   margin-inline: 1px;
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--bg-mid);
 }
 .homework-card-graph-microbar.is-daily {
@@ -4314,6 +5528,16 @@ body {
   font-size: 11px;
   color: var(--muted);
   margin-bottom: 10px;
+}
+.homework-card-weekly-gold-head-values {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  line-height: 1.05;
+}
+.homework-card-weekly-gold-head-values strong.is-bound {
+  color: var(--homework-bound-gold-color);
 }
 .homework-card-weekly-gold-head strong {
   font-size: 12px;
@@ -4361,6 +5585,14 @@ body {
   stroke-linejoin: round;
   stroke-linecap: round;
 }
+.homework-card-weekly-gold-bound-path {
+  fill: none;
+  stroke: var(--homework-bound-gold-color);
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  opacity: 0.95;
+}
 .homework-card-weekly-gold-point {
   fill: #fbbf24;
   stroke: rgba(18, 20, 21, 0.9);
@@ -4393,15 +5625,29 @@ body {
   transition: left 0.24s cubic-bezier(0.2, 0.9, 0.2, 1), top 0.24s cubic-bezier(0.2, 0.9, 0.2, 1);
   pointer-events: none;
 }
+.homework-card-weekly-gold-bound-cursor {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--homework-bound-gold-color) 70%, #fff);
+  background: var(--homework-bound-gold-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--homework-bound-gold-color) 30%, transparent);
+  transform: translate(-50%, -50%);
+  transition: left 0.24s cubic-bezier(0.2, 0.9, 0.2, 1), top 0.24s cubic-bezier(0.2, 0.9, 0.2, 1);
+  pointer-events: none;
+}
 .homework-card-weekly-gold-overlay {
   position: absolute;
   top: -24px;
   transform: translateX(-50%);
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border-radius: 999px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 132px;
+  padding: 4px 10px;
+  border-radius: 8px;
   border: 1px solid rgba(234, 234, 222, 0.22);
   background: rgba(16, 20, 22, 0.9);
   font-size: 10px;
@@ -4410,9 +5656,36 @@ body {
   white-space: nowrap;
   transition: left 0.24s cubic-bezier(0.2, 0.9, 0.2, 1), opacity 0.16s ease;
 }
+.homework-card-weekly-gold-overlay.is-left {
+  transform: translateX(0);
+  align-items: flex-start;
+}
+.homework-card-weekly-gold-overlay.is-right {
+  transform: translateX(-100%);
+  align-items: flex-end;
+}
+.homework-card-weekly-gold-overlay-values {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.homework-card-weekly-gold-overlay-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  line-height: 1.1;
+}
+.homework-card-weekly-gold-overlay-row span {
+  color: var(--muted);
+  font-size: 10px;
+}
 .homework-card-weekly-gold-overlay strong {
   color: var(--homework-gold-color);
   font-size: 11px;
+}
+.homework-card-weekly-gold-overlay strong.is-bound {
+  color: var(--homework-bound-gold-color);
 }
 .homework-card-weekly-gold-labels {
   display: flex;
@@ -4460,12 +5733,15 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px;
+  overflow: visible;
 }
 .homework-card-weekly-rate-card {
+  position: relative;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px 7px;
   background: rgba(0, 0, 0, 0.06);
+  overflow: visible;
 }
 .homework-card-weekly-rate-head {
   display: flex;
@@ -4496,7 +5772,7 @@ body {
 }
 .homework-card-weekly-rate-track {
   height: 10px;
-  border-radius: 999px;
+  border-radius: 8px;
   background: rgba(234, 234, 222, 0.18);
   overflow: hidden;
   margin-bottom: 8px;
@@ -4521,7 +5797,7 @@ body {
 .homework-card-weekly-mini-bar {
   flex: 1;
   min-width: 0;
-  border-radius: 999px;
+  border-radius: 8px;
   opacity: 0.55;
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
@@ -4535,6 +5811,23 @@ body {
 .homework-card-weekly-mini-bar.is-active {
   opacity: 1;
   transform: translateY(-1px);
+}
+.homework-card-weekly-inline-readout {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: calc(100% + 6px);
+  z-index: 3;
+  display: grid;
+  gap: 2px;
+  border: 1px solid rgba(234, 234, 222, 0.22);
+  border-radius: 6px;
+  padding: 5px 8px;
+  background: rgba(8, 10, 8, 0.92);
+  font-size: 10px;
+  color: rgba(242, 244, 233, 0.95);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
 }
 .homework-card-graph-mock {
   margin: 8px 0 0;

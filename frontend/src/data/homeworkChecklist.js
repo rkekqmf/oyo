@@ -13,77 +13,84 @@ export const WEEKLY_ITEMS = [
   { id: 'cube', label: '큐브' },
 ]
 
-/** 레이드 (시스템 골드는 주 3회, 그 외 버스 등 추가 체크 가능) */
+/** 레이드: (목데이터를 최소화) 세르카 + 종막/4막 2종만 남김 */
 export const RAID_ITEMS = [
-  { id: 'valtan-n', label: '발탄 노말' },
-  { id: 'valtan-h', label: '발탄 하드' },
-  { id: 'viakiss-n', label: '비아키스 노말' },
-  { id: 'viakiss-h', label: '비아키스 하드' },
-  { id: 'kuku-n', label: '쿠크세이튼 노말' },
-  { id: 'kuku-h', label: '쿠크세이튼 하드' },
-  { id: 'kayangel-n', label: '카양겔 노말' },
-  { id: 'kayangel-h', label: '카양겔 하드' },
-  { id: 'abrel-n', label: '아브렐슈드 노말' },
-  { id: 'abrel-h', label: '아브렐슈드 하드' },
-  { id: 'ilia-n', label: '일리아칸 노말' },
-  { id: 'ilia-h', label: '일리아칸 하드' },
-  { id: 'ivory-n', label: '상아탑 노말' },
-  { id: 'ivory-h', label: '상아탑 하드' },
-  { id: 'kamen', label: '카멘' },
-  { id: 'echidna', label: '에키드나' },
-  { id: 'behamos', label: '베히모스' },
+  // Shadow raid: 세르카
+  { id: 'serka-n', label: '세르카', groupKey: 'serka', category: 'shadow', difficulty: 'normal', entryLevel: 1710, gold: 35000, boundGold: 0 },
+  { id: 'serka-h', label: '세르카', groupKey: 'serka', category: 'shadow', difficulty: 'hard', entryLevel: 1730, gold: 44000, boundGold: 0 },
+  { id: 'serka-m', label: '세르카', groupKey: 'serka', category: 'shadow', difficulty: 'nightmare', entryLevel: 1740, gold: 54000, boundGold: 0 },
+
+  // Abyss dungeon: 지평의 성당
+  { id: 'cathedral-s1', label: '지평의 성당', groupKey: 'cathedral', category: 'abyss', difficulty: 'stage1', entryLevel: 1700, gold: 0, boundGold: 30000 },
+  { id: 'cathedral-s2', label: '지평의 성당', groupKey: 'cathedral', category: 'abyss', difficulty: 'stage2', entryLevel: 1720, gold: 0, boundGold: 40000 },
+  { id: 'cathedral-s3', label: '지평의 성당', groupKey: 'cathedral', category: 'abyss', difficulty: 'stage3', entryLevel: 1750, gold: 0, boundGold: 50000 },
+
+  // Kazerus raid: 종막:카제로스
+  { id: 'kazerus-n', label: '종막:카제로스', groupKey: 'kazerus', category: 'kazerus', difficulty: 'normal', entryLevel: 1710, gold: 40000, boundGold: 0 },
+  { id: 'kazerus-h', label: '종막:카제로스', groupKey: 'kazerus', category: 'kazerus', difficulty: 'hard', entryLevel: 1730, gold: 52000, boundGold: 0 },
+
+  // Kazerus raid: 4막:아르모체
+  { id: 'armoce-n', label: '4막:아르모체', groupKey: 'armoce', category: 'kazerus', difficulty: 'normal', entryLevel: 1700, gold: 33000, boundGold: 0 },
+  { id: 'armoce-h', label: '4막:아르모체', groupKey: 'armoce', category: 'kazerus', difficulty: 'hard', entryLevel: 1720, gold: 42000, boundGold: 0 },
+
+  // Kazerus raid: 3막:모르둠
+  { id: 'mordum-s', label: '3막:모르둠', groupKey: 'mordum', category: 'kazerus', difficulty: 'single', entryLevel: 1680, gold: 10500, boundGold: 10500 },
+  { id: 'mordum-n', label: '3막:모르둠', groupKey: 'mordum', category: 'kazerus', difficulty: 'normal', entryLevel: 1680, gold: 21000, boundGold: 0 },
+  { id: 'mordum-h', label: '3막:모르둠', groupKey: 'mordum', category: 'kazerus', difficulty: 'hard', entryLevel: 1700, gold: 27000, boundGold: 0 },
+
+  // Kazerus raid: 2막:아브렐슈드
+  { id: 'avrel-s', label: '2막:아브렐슈드', groupKey: 'avrel', category: 'kazerus', difficulty: 'single', entryLevel: 1670, gold: 8250, boundGold: 8250 },
+  { id: 'avrel-n', label: '2막:아브렐슈드', groupKey: 'avrel', category: 'kazerus', difficulty: 'normal', entryLevel: 1670, gold: 16500, boundGold: 0 },
+  { id: 'avrel-h', label: '2막:아브렐슈드', groupKey: 'avrel', category: 'kazerus', difficulty: 'hard', entryLevel: 1690, gold: 23000, boundGold: 0 },
+
+  // Kazerus raid: 1막:에기르
+  { id: 'egir-s', label: '1막:에기르', groupKey: 'egir', category: 'kazerus', difficulty: 'single', entryLevel: 1660, gold: 5750, boundGold: 5750 },
+  { id: 'egir-n', label: '1막:에기르', groupKey: 'egir', category: 'kazerus', difficulty: 'normal', entryLevel: 1660, gold: 11500, boundGold: 0 },
+  { id: 'egir-h', label: '1막:에기르', groupKey: 'egir', category: 'kazerus', difficulty: 'hard', entryLevel: 1680, gold: 18000, boundGold: 0 },
+
+  // Kazerus raid: 서막:에키드나
+  { id: 'ekidna-s', label: '서막:에키드나', groupKey: 'ekidna', category: 'kazerus', difficulty: 'single', entryLevel: 1620, gold: 0, boundGold: 6100 },
+  { id: 'ekidna-n', label: '서막:에키드나', groupKey: 'ekidna', category: 'kazerus', difficulty: 'normal', entryLevel: 1620, gold: 0, boundGold: 6100 },
+  { id: 'ekidna-h', label: '서막:에키드나', groupKey: 'ekidna', category: 'kazerus', difficulty: 'hard', entryLevel: 1640, gold: 7200, boundGold: 0 },
+
+  // Epic raid: 베히모스
+  { id: 'behemoth-n', label: '베히모스', groupKey: 'behemoth', category: 'epic', difficulty: 'normal', entryLevel: 1640, gold: 7200, boundGold: 0 },
 ]
 
-/** 레벨대별 골드 받는 레이드 3개 (싱글 기본값) */
-const DEFAULT_RAIDS_BY_LEVEL = [
-  { minLevel: 0, ids: ['valtan-n', 'valtan-h', 'viakiss-n'] },
-  { minLevel: 1445, ids: ['valtan-h', 'viakiss-n', 'viakiss-h'] },
-  { minLevel: 1475, ids: ['viakiss-h', 'kuku-n', 'kuku-h'] },
-  { minLevel: 1540, ids: ['kuku-h', 'kayangel-n', 'abrel-n'] },
-  { minLevel: 1580, ids: ['kayangel-h', 'abrel-n', 'abrel-h'] },
-  { minLevel: 1600, ids: ['abrel-h', 'ilia-n', 'ilia-h'] },
-  { minLevel: 1620, ids: ['ilia-h', 'ivory-n', 'ivory-h'] },
-]
-
-/** 레벨에 맞는 기본 레이드 3개 (싱글) */
+/** 레벨에 맞는 기본 레이드 3개 (골드+귀속골드 합계 상위) */
 export function getDefaultRaidIdsByLevel(itemLevel) {
-  if (itemLevel == null || !Number.isFinite(itemLevel)) {
-    return DEFAULT_RAIDS_BY_LEVEL[0].ids
-  }
-  const lv = Number(itemLevel)
-  let result = DEFAULT_RAIDS_BY_LEVEL[0].ids
-  for (const tier of DEFAULT_RAIDS_BY_LEVEL) {
-    if (lv >= tier.minLevel) result = tier.ids
-  }
-  return result
-}
+  const lv = Number(String(itemLevel ?? '').replace(/[^\d.]/g, ''))
+  if (!Number.isFinite(lv)) return []
 
-/** 버스로 많이 도는 레이드 목록 (모달 버스 버튼용) */
-export const BUS_RAID_IDS = [
-  'valtan-n', 'valtan-h', 'viakiss-n', 'viakiss-h', 'kuku-n', 'kuku-h',
-]
+  const eligible = RAID_ITEMS.filter((it) => {
+    const entry = Number(it.entryLevel)
+    return Number.isFinite(entry) && entry <= lv
+  })
 
-/**
- * 레이드별 싱글 보상 골드 목데이터 (나중에 실제 데이터로 교체)
- * - gold: 거래 가능 골드
- * - boundGold: 귀속 골드 (하위 레이드는 100% 귀속일 수 있음)
- */
-export const RAID_GOLD_MOCK = {
-  'valtan-n': { gold: 600, boundGold: 600 },
-  'valtan-h': { gold: 900, boundGold: 900 },
-  'viakiss-n': { gold: 800, boundGold: 800 },
-  'viakiss-h': { gold: 1200, boundGold: 1200 },
-  'kuku-n': { gold: 1500, boundGold: 1500 },
-  'kuku-h': { gold: 1500, boundGold: 1500 },
-  'kayangel-n': { gold: 0, boundGold: 2000 },
-  'kayangel-h': { gold: 0, boundGold: 2500 },
-  'abrel-n': { gold: 2800, boundGold: 0 },
-  'abrel-h': { gold: 5600, boundGold: 0 },
-  'ilia-n': { gold: 3750, boundGold: 0 },
-  'ilia-h': { gold: 7500, boundGold: 0 },
-  'ivory-n': { gold: 4500, boundGold: 0 },
-  'ivory-h': { gold: 9000, boundGold: 0 },
-  'kamen': { gold: 15500, boundGold: 0 },
-  'echidna': { gold: 11000, boundGold: 0 },
-  'behamos': { gold: 11000, boundGold: 0 },
+  // 같은 레이드 그룹에서는 보상이 가장 큰 난이도 1개만 후보로 사용
+  const bestByGroup = new Map()
+  for (const it of eligible) {
+    const groupKey = it.groupKey ?? it.id
+    const payout = Number(it.gold ?? 0) + Number(it.boundGold ?? 0)
+    const tradeableGold = Number(it.gold ?? 0)
+    const prev = bestByGroup.get(groupKey)
+    if (
+      !prev ||
+      payout > prev.payout ||
+      (payout === prev.payout && tradeableGold > prev.tradeableGold) ||
+      (payout === prev.payout && tradeableGold === prev.tradeableGold && Number(it.entryLevel ?? 0) > Number(prev.item.entryLevel ?? 0))
+    ) {
+      bestByGroup.set(groupKey, { item: it, payout, tradeableGold })
+    }
+  }
+
+  return Array.from(bestByGroup.values())
+    .sort(
+      (a, b) =>
+        b.payout - a.payout ||
+        b.tradeableGold - a.tradeableGold ||
+        Number(b.item.entryLevel ?? 0) - Number(a.item.entryLevel ?? 0)
+    )
+    .slice(0, 3)
+    .map((x) => x.item.id)
 }
